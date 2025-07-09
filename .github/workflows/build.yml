@@ -65,16 +65,21 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: artifacts
-        merge-multiple: true
+    
+    - name: List downloaded files (debug)
+      run: |
+        echo "Downloaded artifacts:"
+        find artifacts -type f -name "*" || echo "No files found"
+        ls -la artifacts/ || echo "No artifacts directory"
     
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          artifacts/PortfolioManager-windows.exe
-          artifacts/PortfolioManager-macos
-          artifacts/PortfolioManager-linux
+          artifacts/PortfolioManager-windows/PortfolioManager-windows.exe
+          artifacts/PortfolioManager-macos/PortfolioManager-macos
+          artifacts/PortfolioManager-linux/PortfolioManager-linux
         body: |
           ## Portfolio Document Manager ${{ github.ref_name }}
           
@@ -101,5 +106,5 @@ jobs:
       if: github.event_name == 'workflow_dispatch'
       uses: actions/upload-artifact@v4
       with:
-        name: all-executables
-        path: artifacts/
+        name: all-executables-combined
+        path: artifacts/*/
