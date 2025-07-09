@@ -65,12 +65,39 @@ Zie de [README](https://github.com/JOUW-GEBRUIKERSNAAM/portfolio-document-manage
 
 6. Klik "Publish release"
 
-## Stap 4: Automatische builds
+## Stap 4: Monitor de automatische builds
 
-Na het maken van de v1.0.0 tag zal GitHub Actions automatisch:
-- Builds maken voor Windows, macOS en Linux
+1. **Onmiddellijk na het maken van de release:**
+   - Ga naar: Repository → **Actions** tab
+   - Je ziet een nieuwe workflow run genaamd "Build and Release"
+   - Deze start binnen 10-30 seconden
+
+2. **Voortgang volgen:**
+   - Klik op de workflow run om details te zien
+   - 3 parallelle jobs draaien (Windows, macOS, Linux)
+   - Elke job duurt ~3-5 minuten
+
+3. **Wanneer klaar:**
+   - Ga terug naar je **Releases** pagina
+   - De executable bestanden zijn automatisch toegevoegd!
+   - Gebruikers kunnen nu downloaden
+
+### ⏱️ Verwachte timing:
+
+Na het maken van de v1.0.0 tag zal GitHub Actions **onmiddellijk** automatisch:
+- Builds maken voor Windows, macOS en Linux (duurt ~5-15 minuten totaal)
 - Executables toevoegen aan de release
 - Gebruikers kunnen direct downloaden!
+
+### ⏱️ Timing van de builds:
+- **Start**: Binnen 10-30 seconden na het maken van de tag
+- **Windows build**: ~3-5 minuten
+- **macOS build**: ~3-5 minuten  
+- **Linux build**: ~2-4 minuten
+- **Release update**: ~1 minuut
+- **Totaal**: Ongeveer 5-15 minuten voor alle platforms
+
+Je kunt de voortgang volgen via: Repository → Actions tab
 
 **Let op**: GitHub voegt automatisch ook source code archives toe (ZIP + TAR.GZ). Dit is normaal gedrag en handig voor developers. Eindgebruikers moeten de executable bestanden downloaden, niet de source code archives.
 
