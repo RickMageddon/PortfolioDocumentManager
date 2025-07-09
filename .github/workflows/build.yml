@@ -28,7 +28,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.9'
 
@@ -48,7 +48,7 @@ jobs:
         pyinstaller --onefile --windowed --name PortfolioManager-${{ matrix.platform }} main.py
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: PortfolioManager-${{ matrix.platform }}
         path: dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}
@@ -62,15 +62,18 @@ jobs:
     - uses: actions/checkout@v4
     
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        merge-multiple: true
     
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          PortfolioManager-windows/PortfolioManager-windows.exe
-          PortfolioManager-macos/PortfolioManager-macos
-          PortfolioManager-linux/PortfolioManager-linux
+          artifacts/PortfolioManager-windows.exe
+          artifacts/PortfolioManager-macos
+          artifacts/PortfolioManager-linux
         body: |
           ## Portfolio Document Manager ${{ github.ref_name }}
           
