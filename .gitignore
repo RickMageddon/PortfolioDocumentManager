@@ -9,6 +9,13 @@ temp_verantwoordingsdocument_*.md
 # Portfolio data
 portfolio_data.json
 
+# Build and release files
+build/
+dist/
+release/
+*.zip
+*.spec
+
 # Python cache
 __pycache__/
 *.py[cod]

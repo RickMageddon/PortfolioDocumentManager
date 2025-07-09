@@ -1,0 +1,94 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            extension: .exe
+          - os: macos-latest
+            platform: macos
+            extension: ""
+          - os: ubuntu-latest
+            platform: linux
+            extension: ""
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0
+
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --windowed --name PortfolioManager-${{ matrix.platform }} main.py
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: PortfolioManager-${{ matrix.platform }}
+        path: dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          PortfolioManager-windows/PortfolioManager-windows.exe
+          PortfolioManager-macos/PortfolioManager-macos
+          PortfolioManager-linux/PortfolioManager-linux
+        body: |
+          ## Portfolio Document Manager ${{ github.ref_name }}
+          
+          Cross-platform desktop applicatie voor het beheren van portfolio items en genereren van verantwoordingsdocumenten voor TI studenten.
+          
+          ### Downloads
+          - **Windows**: `PortfolioManager-windows.exe`
+          - **macOS**: `PortfolioManager-macos`
+          - **Linux**: `PortfolioManager-linux`
+          
+          ### Installatie
+          1. Download het juiste bestand voor jouw platform
+          2. Op macOS/Linux: `chmod +x PortfolioManager-*`
+          3. Start de applicatie
+          
+          ### Changelog
+          Zie [CHANGELOG.md](https://github.com/rickmageddon/portfolio-document-manager/blob/main/CHANGELOG.md) voor alle wijzigingen.
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
