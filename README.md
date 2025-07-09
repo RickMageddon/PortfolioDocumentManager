@@ -36,12 +36,18 @@ Een professionele desktop applicatie voor het beheren van portfolio items en het
 
 ### Download & Installatie
 
-1. **Download de executable voor jouw platform:**
-   - **Windows**: `PortfolioManager-windows.exe`
-   - **macOS**: `PortfolioManager-darwin`
-   - **Linux**: `PortfolioManager-linux`
+#### 🎯 Voor Eindgebruikers (Aanbevolen)
 
-2. **Start de applicatie:**
+1. **Ga naar de [Releases pagina](https://github.com/rickmageddon/portfolio-document-manager/releases)**
+
+2. **Download de executable voor jouw platform:**
+   - **Windows**: `PortfolioManager-windows.exe`
+   - **macOS**: `PortfolioManager-macos`  
+   - **Linux**: `PortfolioManager-linux`
+   
+   ⚠️ **Let op**: Download de executable bestanden, niet de "Source code" ZIP/TAR.GZ files (die zijn voor developers)
+
+3. **Start de applicatie:**
    - Windows: Dubbelklik op het .exe bestand
    - macOS/Linux: Maak executable en run via terminal:
      ```bash
@@ -49,12 +55,12 @@ Een professionele desktop applicatie voor het beheren van portfolio items en het
      ./PortfolioManager-*
      ```
 
-3. **Eerste keer opstarten:**
+4. **Eerste keer opstarten:**
    - Vul je studentgegevens in
    - Begin met het toevoegen van portfolio items
    - Vraag feedback en genereer je document!
 
-### Vanuit Source Code
+#### 🛠️ Voor Developers (Vanuit Source Code)
 
 1. **Clone de repository:**
    ```bash
