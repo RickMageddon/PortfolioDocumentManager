@@ -38,7 +38,7 @@ Een professionele desktop applicatie voor het beheren van portfolio items en het
 
 #### 🎯 Voor Eindgebruikers (Aanbevolen)
 
-1. **Ga naar de [Releases pagina](https://github.com/rickmageddon/portfolio-document-manager/releases)**
+1. **Ga naar de [Releases pagina](https://github.com/RickMageddon/portfolio-document-manager/releases)**
 
 2. **Download de executable voor jouw platform:**
    - **Windows**: `PortfolioManager-windows.exe`
@@ -64,7 +64,7 @@ Een professionele desktop applicatie voor het beheren van portfolio items en het
 
 1. **Clone de repository:**
    ```bash
-   git clone https://github.com/rickmageddon/portfolio-document-manager.git
+   git clone https://github.com/RickMageddon/portfolio-document-manager.git
    cd portfolio-document-manager
    ```
 

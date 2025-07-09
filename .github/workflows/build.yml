@@ -90,7 +90,7 @@ jobs:
           3. Start de applicatie
           
           ### Changelog
-          Zie [CHANGELOG.md](https://github.com/rickmageddon/portfolio-document-manager/blob/main/CHANGELOG.md) voor alle wijzigingen.
+          Zie [CHANGELOG.md](https://github.com/RickMageddon/portfolio-document-manager/blob/main/CHANGELOG.md) voor alle wijzigingen.
         draft: false
         prerelease: false
       env:
