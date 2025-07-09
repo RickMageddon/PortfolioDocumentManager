@@ -82,6 +82,9 @@ Zie de [README](https://github.com/JOUW-GEBRUIKERSNAAM/portfolio-document-manage
    - De executable bestanden zijn automatisch toegevoegd!
    - Gebruikers kunnen nu downloaden
 
+### ⚠️ **Als je deprecated warnings ziet:**
+De GitHub Actions zijn al geüpdatet naar de nieuwste versies (v4/v5), dus dit zou niet meer moeten gebeuren. Als je toch errors ziet, push de laatste versie van de code.
+
 ### ⏱️ Verwachte timing:
 
 Na het maken van de v1.0.0 tag zal GitHub Actions **onmiddellijk** automatisch:
