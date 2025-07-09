@@ -1,0 +1,33 @@
+# Template document - should not be committed
+Verantwoordingsdocument_TI_S4.md
+
+# Generated documents
+Verantwoordingsdocument_*.pdf
+Verantwoordingsdocument_*.md
+temp_verantwoordingsdocument_*.md
+
+# Portfolio data
+portfolio_data.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+.env
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
