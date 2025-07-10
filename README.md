@@ -181,7 +181,9 @@ Bijdragen zijn welkom! Volg deze stappen:
 
 - **Developer**: Rick van der Voort
 - **Website**: [rickmageddon.com](https://rickmageddon.com)
-- **GitHub Issues**: Voor bugs en feature requests
+- **Issues & Support**: [GitHub Issues](https://github.com/RickMageddon/PortfolioDocumentManager/issues)
+
+Voor bugs, feature requests, vragen of feedback - maak een issue aan op GitHub!
 
 ## 📄 Licentie
 

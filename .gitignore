@@ -1,6 +1,9 @@
 # Template document - should not be committed
 Verantwoordingsdocument_TI_S4.md
 
+# Setup/development files (not for end users)
+GITHUB_UPLOAD_INSTRUCTIONS.md
+
 # Generated documents
 Verantwoordingsdocument_*.pdf
 Verantwoordingsdocument_*.md

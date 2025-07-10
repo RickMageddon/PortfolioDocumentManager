@@ -197,14 +197,14 @@ class PortfolioManager:
         items_without_feedback = self.count_items_without_feedback()
         if items_without_feedback > 0:
             if items_without_feedback == 1:
-                attention_text = f"Je hebt nog {items_without_feedback} portfolio item waarvoor je feedback moet vragen!"
+                attention_text = f"Je hebt nog {items_without_feedback} portfolio item zonder feedback!"
             else:
-                attention_text = f"Je hebt nog {items_without_feedback} portfolio items waarvoor je feedback moet vragen!"
+                attention_text = f"Je hebt nog {items_without_feedback} portfolio items zonder feedback!"
             self.attention_label.config(text=attention_text, foreground="red")
             self.attention_frame.grid()  # Show the frame
         else:
-            self.attention_label.config(text="✅ Alle portfolio items hebben feedback!", foreground="green")
             if self.portfolio_items:  # Only show if there are items
+                self.attention_label.config(text="✅ Alle portfolio items hebben feedback!", foreground="green")
                 self.attention_frame.grid()  # Show the frame
             else:
                 self.attention_frame.grid_remove()  # Hide if no items
@@ -570,12 +570,16 @@ class PortfolioManager:
                     
                     content.append("")
                     
-                    # Add feedback if available
+                    # Add feedback if available for this specific learning outcome
                     for item in personal_items:
-                        if item.get('feedback'):
-                            content.append(f"**Feedback op {item.get('title')}:**")
+                        # Only show feedback that is specifically for this learning outcome
+                        relevant_feedback = [feedback for feedback in item.get('feedback', []) 
+                                           if lo_num in feedback.get('learning_outcomes', [])]
+                        
+                        if relevant_feedback:
+                            content.append(f"**Feedback op {item.get('title')} voor Leeruitkomst {lo_num}:**")
                             content.append('<div class="feedback-section">')
-                            for feedback in item.get('feedback', []):
+                            for feedback in relevant_feedback:
                                 content.append(f'<div class="feedback-item">')
                                 content.append(f'<strong>{feedback.get("from", "Onbekend")}</strong> ({feedback.get("date", "Geen datum")}):')
                                 content.append(f'<p>{feedback.get("text", "")}</p>')
@@ -594,12 +598,16 @@ class PortfolioManager:
                     
                     content.append("")
                     
-                    # Add feedback if available
+                    # Add feedback if available for this specific learning outcome
                     for item in group_items:
-                        if item.get('feedback'):
-                            content.append(f"**Feedback op {item.get('title')}:**")
+                        # Only show feedback that is specifically for this learning outcome
+                        relevant_feedback = [feedback for feedback in item.get('feedback', []) 
+                                           if lo_num in feedback.get('learning_outcomes', [])]
+                        
+                        if relevant_feedback:
+                            content.append(f"**Feedback op {item.get('title')} voor Leeruitkomst {lo_num}:**")
                             content.append('<div class="feedback-section">')
-                            for feedback in item.get('feedback', []):
+                            for feedback in relevant_feedback:
                                 content.append(f'<div class="feedback-item">')
                                 content.append(f'<strong>{feedback.get("from", "Onbekend")}</strong> ({feedback.get("date", "Geen datum")}):')
                                 content.append(f'<p>{feedback.get("text", "")}</p>')
@@ -740,7 +748,7 @@ class PortfolioManager:
         ttk.Label(frame, text="Portfolio Document Manager", 
                  font=("Arial", 14, "bold")).pack(pady=(0, 10))
         
-        ttk.Label(frame, text="Versie 1.0", 
+        ttk.Label(frame, text="Versie 1.0.4", 
                  font=("Arial", 10)).pack(pady=(0, 15))
         
         # Description
@@ -840,23 +848,27 @@ class PortfolioManager:
         """Count portfolio items that have no feedback"""
         count = 0
         for item in self.portfolio_items:
+            # Check if item has any feedback
             if not item.get('feedback') or len(item.get('feedback', [])) == 0:
                 count += 1
         return count
 
 
 class FeedbackDialog:
-    def __init__(self, parent, title="Feedback Toevoegen", existing_feedback=None):
+    def __init__(self, parent, title="Feedback Toevoegen", existing_feedback=None, learning_outcomes=None, portfolio_item_learning_outcomes=None):
         self.result = None
+        self.learning_outcomes = learning_outcomes or {}
+        self.portfolio_item_learning_outcomes = portfolio_item_learning_outcomes or []
         
         self.dialog = tk.Toplevel(parent)
         self.dialog.title(title)
-        self.dialog.geometry("400x300")
+        self.dialog.geometry("600x800")
         self.dialog.transient(parent)
         self.dialog.grab_set()
+        self.dialog.resizable(True, True)  # Allow resizing
         
         # Center the dialog
-        self.dialog.geometry("+%d+%d" % (parent.winfo_rootx() + 50, parent.winfo_rooty() + 50))
+        self.dialog.geometry("+%d+%d" % (parent.winfo_rootx() + 30, parent.winfo_rooty() + 30))
         
         # Ensure dialog is on top
         self.dialog.lift()
@@ -865,46 +877,111 @@ class FeedbackDialog:
         self.create_widgets(existing_feedback)
         
     def create_widgets(self, existing_feedback=None):
-        main_frame = ttk.Frame(self.dialog, padding="20")
+        # Create main canvas and scrollbar for scrollable content
+        canvas = tk.Canvas(self.dialog)
+        scrollbar = ttk.Scrollbar(self.dialog, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Add mouse wheel scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        main_frame = ttk.Frame(scrollable_frame, padding="20")
         main_frame.pack(fill="both", expand=True)
         
         # Van (who gave feedback)
-        ttk.Label(main_frame, text="Feedback van:", font=("Arial", 10, "bold")).pack(anchor="w", pady=(0, 5))
+        ttk.Label(main_frame, text="Feedback van:", font=("Arial", 11, "bold")).pack(anchor="w", pady=(0, 5))
         self.from_var = tk.StringVar()
-        from_entry = ttk.Entry(main_frame, textvariable=self.from_var, font=("Arial", 10))
-        from_entry.pack(fill="x", pady=(0, 10))
+        from_entry = ttk.Entry(main_frame, textvariable=self.from_var, font=("Arial", 10), width=50)
+        from_entry.pack(fill="x", pady=(0, 20))
+        
+        # Learning outcomes selection for feedback
+        ttk.Label(main_frame, text="Voor welke leeruitkomsten is deze feedback:", font=("Arial", 11, "bold")).pack(anchor="w", pady=(0, 5))
+        ttk.Label(main_frame, text="(alleen leeruitkomsten van dit portfolio item worden getoond)", font=("Arial", 9, "italic")).pack(anchor="w", pady=(0, 10))
+        
+        # Create frame for learning outcomes checkboxes with better spacing
+        lo_frame = ttk.LabelFrame(main_frame, text="Leeruitkomsten", padding="15")
+        lo_frame.pack(fill="x", pady=(0, 20))
+        
+        self.feedback_lo_vars = {}
+        
+        # Only show learning outcomes that are part of this portfolio item
+        for lo_num in self.portfolio_item_learning_outcomes:
+            if lo_num in self.learning_outcomes:
+                lo_data = self.learning_outcomes[lo_num]
+                var = tk.BooleanVar()
+                
+                # Load existing selection if editing
+                if existing_feedback and lo_num in existing_feedback.get('learning_outcomes', []):
+                    var.set(True)
+                
+                self.feedback_lo_vars[lo_num] = var
+                
+                # Create checkbox with better spacing
+                checkbox = ttk.Checkbutton(lo_frame, 
+                                         text=f"LU{lo_num}: {lo_data['title']}", 
+                                         variable=var)
+                checkbox.pack(anchor="w", pady=5)
         
         # Feedback text
-        ttk.Label(main_frame, text="Feedback tekst:", font=("Arial", 10, "bold")).pack(anchor="w", pady=(0, 5))
-        self.feedback_text = tk.Text(main_frame, height=8, font=("Arial", 10))
-        self.feedback_text.pack(fill="both", expand=True, pady=(0, 15))
+        ttk.Label(main_frame, text="Feedback tekst:", font=("Arial", 11, "bold")).pack(anchor="w", pady=(0, 5))
+        text_frame = ttk.Frame(main_frame)
+        text_frame.pack(fill="both", expand=True, pady=(0, 20))
+        
+        self.feedback_text = tk.Text(text_frame, height=12, font=("Arial", 10), wrap=tk.WORD)
+        text_scrollbar = ttk.Scrollbar(text_frame, orient=tk.VERTICAL, command=self.feedback_text.yview)
+        self.feedback_text.configure(yscrollcommand=text_scrollbar.set)
+        
+        self.feedback_text.pack(side=tk.LEFT, fill="both", expand=True)
+        text_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         # Load existing data if editing
         if existing_feedback:
             self.from_var.set(existing_feedback.get('from', ''))
             self.feedback_text.insert('1.0', existing_feedback.get('text', ''))
         
-        # Buttons
+        # Buttons frame with better spacing
         button_frame = ttk.Frame(main_frame)
-        button_frame.pack(fill="x")
+        button_frame.pack(fill="x", pady=(20, 0))
         
         ttk.Button(button_frame, text="Opslaan", command=self.save_feedback).pack(side="right", padx=(10, 0))
         ttk.Button(button_frame, text="Annuleren", command=self.dialog.destroy).pack(side="right")
         
-        # Focus
+        # Focus on the first field
         from_entry.focus()
         
     def save_feedback(self):
         from_text = self.from_var.get().strip()
         feedback_text = self.feedback_text.get("1.0", tk.END).strip()
         
+        # Get selected learning outcomes
+        selected_los = [lo_num for lo_num, var in self.feedback_lo_vars.items() if var.get()]
+        
         if not from_text or not feedback_text:
             messagebox.showwarning("Invoer", "Vul alle velden in.")
+            return
+            
+        if not selected_los:
+            messagebox.showwarning("Invoer", "Selecteer minimaal één leeruitkomst voor deze feedback.")
             return
         
         self.result = {
             'from': from_text,
             'text': feedback_text,
+            'learning_outcomes': selected_los,
             'date': datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
         }
         
@@ -1076,7 +1153,11 @@ class PortfolioItemDialog:
         if existing_item and existing_item.get('feedback'):
             for feedback in existing_item.get('feedback', []):
                 self.feedback_list.append(feedback)
-                self.feedback_listbox.insert(tk.END, f"{feedback.get('from', 'Onbekend')}: {feedback.get('text', '')[:50]}... ({feedback.get('date', 'Geen datum')})")
+                # Show learning outcomes in the display if available
+                lo_text = ""
+                if feedback.get('learning_outcomes'):
+                    lo_text = f" ({', '.join([f'LU{lo}' for lo in feedback.get('learning_outcomes', [])])})"
+                self.feedback_listbox.insert(tk.END, f"{feedback.get('from', 'Onbekend')}{lo_text}: {feedback.get('text', '')[:40]}... ({feedback.get('date', 'Geen datum')})")
         
         feedback_buttons = ttk.Frame(feedback_frame)
         feedback_buttons.pack(fill="x")
@@ -1125,12 +1206,23 @@ class PortfolioItemDialog:
 
     def add_feedback(self):
         """Voeg feedback toe via dialoog"""
-        dialog = FeedbackDialog(self.dialog, "Feedback Toevoegen")
+        # Get currently selected learning outcomes
+        selected_los = [lo_num for lo_num, var in self.lo_vars.items() if var.get()]
+        
+        if not selected_los:
+            messagebox.showwarning("Geen leeruitkomsten", "Selecteer eerst leeruitkomsten voor dit portfolio item voordat je feedback toevoegt.")
+            return
+        
+        dialog = FeedbackDialog(self.dialog, "Feedback Toevoegen", 
+                              learning_outcomes=self.learning_outcomes,
+                              portfolio_item_learning_outcomes=selected_los)
         feedback = dialog.get_feedback()
         
         if feedback:
             self.feedback_list.append(feedback)
-            self.feedback_listbox.insert(tk.END, f"{feedback.get('from', 'Onbekend')}: {feedback.get('text', '')[:50]}... ({feedback.get('date', 'Geen datum')})")
+            # Show learning outcomes in the display
+            lo_text = ", ".join([f"LU{lo}" for lo in feedback.get('learning_outcomes', [])])
+            self.feedback_listbox.insert(tk.END, f"{feedback.get('from', 'Onbekend')} ({lo_text}): {feedback.get('text', '')[:40]}... ({feedback.get('date', 'Geen datum')})")
 
     def edit_feedback(self):
         """Bewerk geselecteerde feedback"""
@@ -1139,18 +1231,28 @@ class PortfolioItemDialog:
             messagebox.showwarning("Selectie", "Selecteer eerst een feedback item.")
             return
         
+        # Get currently selected learning outcomes
+        selected_los = [lo_num for lo_num, var in self.lo_vars.items() if var.get()]
+        
+        if not selected_los:
+            messagebox.showwarning("Geen leeruitkomsten", "Selecteer eerst leeruitkomsten voor dit portfolio item voordat je feedback bewerkt.")
+            return
+        
         index = selection[0]
         existing_feedback = self.feedback_list[index]
         
         # Open feedback dialoog met bestaande feedback
-        dialog = FeedbackDialog(self.dialog, "Feedback Bewerken", existing_feedback)
+        dialog = FeedbackDialog(self.dialog, "Feedback Bewerken", existing_feedback,
+                              learning_outcomes=self.learning_outcomes,
+                              portfolio_item_learning_outcomes=selected_los)
         feedback = dialog.get_feedback()
         
         if feedback:
             self.feedback_list[index] = feedback
             # Update display
             self.feedback_listbox.delete(index)
-            self.feedback_listbox.insert(index, f"{feedback.get('from', 'Onbekend')}: {feedback.get('text', '')[:50]}... ({feedback.get('date', 'Geen datum')})")
+            lo_text = ", ".join([f"LU{lo}" for lo in feedback.get('learning_outcomes', [])])
+            self.feedback_listbox.insert(index, f"{feedback.get('from', 'Onbekend')} ({lo_text}): {feedback.get('text', '')[:40]}... ({feedback.get('date', 'Geen datum')})")
             self.feedback_listbox.selection_set(index)
 
     def remove_feedback(self):
