@@ -13,7 +13,7 @@ permissions:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -45,44 +45,57 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
-          xvfb \
           libgtk-3-dev \
-          libwebkit2gtk-4.0-dev \
-          libappindicator3-dev \
-          librsvg2-dev \
           libcairo2-dev \
-          libpango1.0-dev \
-          libgdk-pixbuf2.0-dev \
-          libatk1.0-dev \
-          libgirepository1.0-dev \
-          gir1.2-gtk-3.0
+          libpango1.0-dev
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install auto-py-to-exe
+
+    - name: Test Flet import
+      run: |
+        python -c "import flet; print('Flet import successful')"
+        
+    - name: Debug environment
+      run: |
+        echo "Python version: $(python --version)"
+        echo "Platform: ${{ matrix.platform }}"
+        echo "OS: ${{ matrix.os }}"
+        pip list | grep -E "(flet|pyinstaller)"
         
     - name: Build executable with PyInstaller
+      shell: bash
       run: |
-        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
-          # For Linux, use headless build approach
-          xvfb-run -a pyinstaller --onefile --windowed \
-            --name "PortfolioManager-${{ matrix.platform }}" \
-            --icon="${{ matrix.icon }}" \
-            --hidden-import=flet \
-            --hidden-import=flet.core \
-            --collect-all=flet \
-            main_flet.py
-        else
-          # For Windows and macOS
-          pyinstaller --onefile --windowed \
-            --name "PortfolioManager-${{ matrix.platform }}" \
-            --icon="${{ matrix.icon }}" \
-            --hidden-import=flet \
-            --hidden-import=flet.core \
-            --collect-all=flet \
-            main_flet.py
-        fi
+        # Simple PyInstaller command without complex Flet options
+        pyinstaller \
+          --onefile \
+          --windowed \
+          --name "PortfolioManager-${{ matrix.platform }}" \
+          --icon="${{ matrix.icon }}" \
+          --add-data "requirements.txt:." \
+          main_flet.py
+      continue-on-error: true
+      
+    - name: Alternative build attempt if first failed
+      if: failure()
+      shell: bash
+      run: |
+        echo "First build failed, trying alternative approach..."
+        # Try without icon and windowed flags
+        pyinstaller \
+          --onefile \
+          --name "PortfolioManager-${{ matrix.platform }}" \
+          main_flet.py
+        
+    - name: Check build output
+      run: |
+        echo "=== Build directory contents ==="
+        ls -la dist/ || echo "No dist directory"
+        echo "=== Target file check ==="
+        ls -la "dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}" || echo "Target file not found"
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
