@@ -13,7 +13,9 @@ permissions:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: windows-latest
@@ -43,6 +45,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
+          xvfb \
           libgtk-3-dev \
           libwebkit2gtk-4.0-dev \
           libappindicator3-dev \
@@ -50,19 +53,36 @@ jobs:
           libcairo2-dev \
           libpango1.0-dev \
           libgdk-pixbuf2.0-dev \
-          libatk1.0-dev
+          libatk1.0-dev \
+          libgirepository1.0-dev \
+          gir1.2-gtk-3.0
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-
+        
     - name: Build executable with PyInstaller
       run: |
-        pyinstaller --onefile --windowed \
-          --name "PortfolioManager-${{ matrix.platform }}" \
-          --icon="${{ matrix.icon }}" \
-          main_flet.py
+        if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          # For Linux, use headless build approach
+          xvfb-run -a pyinstaller --onefile --windowed \
+            --name "PortfolioManager-${{ matrix.platform }}" \
+            --icon="${{ matrix.icon }}" \
+            --hidden-import=flet \
+            --hidden-import=flet.core \
+            --collect-all=flet \
+            main_flet.py
+        else
+          # For Windows and macOS
+          pyinstaller --onefile --windowed \
+            --name "PortfolioManager-${{ matrix.platform }}" \
+            --icon="${{ matrix.icon }}" \
+            --hidden-import=flet \
+            --hidden-import=flet.core \
+            --collect-all=flet \
+            main_flet.py
+        fi
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
@@ -74,7 +94,7 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') && always()
     
     steps:
     - name: Checkout repository
@@ -84,20 +104,46 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         path: artifacts/
+      continue-on-error: true
 
     - name: Display artifact structure
       run: |
         echo "=== Artifact Directory Structure ==="
-        find artifacts/ -type f -exec ls -la {} \;
+        find artifacts/ -type f -exec ls -la {} \; || echo "No artifacts found"
         echo "=== End Structure ==="
+
+    - name: Prepare release files
+      run: |
+        mkdir -p release-files
+        
+        # Copy available artifacts to release-files directory
+        if [ -f "artifacts/PortfolioManager-windows/PortfolioManager-windows.exe" ]; then
+          cp "artifacts/PortfolioManager-windows/PortfolioManager-windows.exe" "release-files/"
+          echo "✅ Windows executable found"
+        else
+          echo "❌ Windows executable not found"
+        fi
+        
+        if [ -f "artifacts/PortfolioManager-darwin/PortfolioManager-darwin" ]; then
+          cp "artifacts/PortfolioManager-darwin/PortfolioManager-darwin" "release-files/"
+          echo "✅ macOS executable found"
+        else
+          echo "❌ macOS executable not found"
+        fi
+        
+        if [ -f "artifacts/PortfolioManager-linux/PortfolioManager-linux" ]; then
+          cp "artifacts/PortfolioManager-linux/PortfolioManager-linux" "release-files/"
+          echo "✅ Linux executable found"
+        else
+          echo "❌ Linux executable not found"
+        fi
+        
+        ls -la release-files/
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        files: |
-          artifacts/PortfolioManager-windows/PortfolioManager-windows.exe
-          artifacts/PortfolioManager-darwin/PortfolioManager-darwin
-          artifacts/PortfolioManager-linux/PortfolioManager-linux
+        files: release-files/*
         name: Portfolio Document Manager ${{ github.ref_name }}
         body: |
           ## 🎉 Portfolio Document Manager ${{ github.ref_name }}
