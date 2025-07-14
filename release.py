@@ -57,6 +57,12 @@ def create_executable():
         'main_flet.py'
     ]
     
+    # Add icon if available
+    if system == 'windows' and os.path.exists('icon.ico'):
+        cmd.insert(-1, '--icon=icon.ico')
+    elif os.path.exists('icon.png'):
+        cmd.insert(-1, '--icon=icon.png')
+    
     print(f"🔨 Building {exe_name}...")
     
     try:
@@ -119,7 +125,7 @@ def create_zip_archive(release_dir):
     else:
         arch = machine
     
-    zip_name = f'PortfolioManager-v1.0.0-{platform_name}-{arch}.zip'
+    zip_name = f'PortfolioManager-v1.5.0-{platform_name}-{arch}.zip'
     
     with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for file_path in release_dir.rglob('*'):
