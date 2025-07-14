@@ -1,10 +1,11 @@
 # 📚 Portfolio Document Manager
 
-Een professionele desktop applicatie voor het beheren van portfolio items en het genereren van verantwoordingsdocumenten voor Technische Informatica studenten van de Hogeschool Utrecht.
+Een moderne, cross-platform desktop applicatie voor het beheren van portfolio items en het genereren van verantwoordingsdocumenten voor Technische Informatica studenten van de Hogeschool Utrecht.
 
 ![Platform Support](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-1.5.0-brightgreen)
 
 ## ✨ Features
 
@@ -27,10 +28,12 @@ Een professionele desktop applicatie voor het beheren van portfolio items en het
 - **Template Gebaseerd**: Gebaseerd op officiële HU TI templates
 
 ### 🎯 Gebruikersvriendelijk
-- **Intuïtieve Interface**: Moderne GUI gebouwd met Tkinter
+- **Moderne Interface**: Prachtige GUI gebouwd met Flet (Flutter-gebaseerd framework)
+- **Cross-platform Native Look**: Ziet er native uit op elk platform
+- **Responsive Design**: Interface past zich aan verschillende schermgroottes aan
 - **Data Persistentie**: Automatisch opslaan in JSON formaat
 - **Import/Export**: Backup en herstel functionaliteit
-- **Cross-platform**: Werkt op Windows, macOS en Linux
+- **Cross-platform**: Werkt naadloos op Windows, macOS en Linux
 
 ## 🚀 Quick Start
 
@@ -41,18 +44,18 @@ Een professionele desktop applicatie voor het beheren van portfolio items en het
 1. **Ga naar de [Releases pagina](https://github.com/RickMageddon/portfolio-document-manager/releases)**
 
 2. **Download de executable voor jouw platform:**
-   - **Windows**: `PortfolioManager-windows.exe`
-   - **macOS**: `PortfolioManager-macos`  
-   - **Linux**: `PortfolioManager-linux`
+   - **Windows**: `PortfolioManager-v1.5.0-windows-x64.exe`
+   - **macOS**: `PortfolioManager-v1.5.0-macos-x64`  
+   - **Linux**: `PortfolioManager-v1.5.0-linux-x64`
    
    ⚠️ **Let op**: Download de executable bestanden, niet de "Source code" ZIP/TAR.GZ files (die zijn voor developers)
 
 3. **Start de applicatie:**
-   - Windows: Dubbelklik op het .exe bestand
-   - macOS/Linux: Maak executable en run via terminal:
+   - **Windows**: Dubbelklik op het .exe bestand
+   - **macOS/Linux**: Maak executable en run via terminal:
      ```bash
-     chmod +x PortfolioManager-*
-     ./PortfolioManager-*
+     chmod +x PortfolioManager-v1.5.0-*
+     ./PortfolioManager-v1.5.0-*
      ```
 
 4. **Eerste keer opstarten:**
@@ -75,8 +78,28 @@ Een professionele desktop applicatie voor het beheren van portfolio items en het
 
 3. **Start de applicatie:**
    ```bash
-   python main.py
+   python main_flet.py
    ```
+
+## 🆕 Nieuw in v1.5.0
+
+### 🎨 Complete UI Overhaul met Flet
+- **Migratie naar Flet**: Volledig herontworpen met Google's Flutter-gebaseerde Flet framework
+- **Moderne Look**: Prachtige Material Design interface
+- **Native Performance**: Betere prestaties en responsiviteit
+- **Cross-platform Consistency**: Identieke ervaring op alle platforms
+
+### ✨ Nieuwe Features
+- **Verbeterde Gebruikersinterface**: Intuïtievere navigatie en cleaner design
+- **Enhanced Data Management**: Verbeterde data persistentie en error handling
+- **Better Feedback System**: Geoptimaliseerde feedback workflows
+- **Improved Build System**: Automatische builds voor alle platforms via GitHub Actions
+
+### 🔧 Technische Verbeteringen
+- **Moderne Tech Stack**: Van Tkinter naar Flet voor toekomstbestendigheid
+- **Better Code Structure**: Gerefactorde codebase voor onderhoudbaarheid
+- **Enhanced Error Handling**: Robuustere foutafhandeling
+- **Automated Releases**: Volledig geautomatiseerde build en release pipeline
 
 ## 📖 Gebruikshandleiding
 
@@ -127,13 +150,17 @@ python build.py
 ### Project Structuur
 ```
 portfolio-document-manager/
-├── main.py                    # Hoofd applicatie
-├── requirements.txt           # Python dependencies
-├── build.py                  # Build script voor executables
-├── .gitignore               # Git ignore regels
-├── README.md                # Deze documentatie
-└── dist/                    # Gegenereerde executables
+├── main_flet.py              # Hoofd applicatie (Flet UI)
+├── requirements.txt          # Python dependencies
+├── build.py                 # Build script voor executables
+├── .gitignore              # Git ignore regels
+├── README.md               # Deze documentatie
+├── .github/workflows/      # GitHub Actions CI/CD
+└── release/                # Gegenereerde executables
 ```
+
+### Legacy Files
+- `main.py`: Oude Tkinter versie (deprecated vanaf v1.5.0)
 
 ## 📋 Vereisten
 
@@ -144,8 +171,14 @@ portfolio-document-manager/
 
 ### Voor Development
 - Python 3.8 of hoger
-- tkinter (meestal standaard geïnstalleerd)
+- Flet framework voor UI (automatisch geïnstalleerd via requirements.txt)
 - Zie `requirements.txt` voor alle dependencies
+
+### Dependencies
+De applicatie gebruikt:
+- **Flet**: Voor de moderne cross-platform UI
+- **PyInstaller**: Voor het bouwen van executables
+- **Andere**: Zie `requirements.txt` voor complete lijst
 
 ## 🆘 Probleemoplossing
 
@@ -157,7 +190,14 @@ portfolio-document-manager/
 
 **Applicatie start niet**
 - Controleer of je de juiste executable hebt gedownload voor je platform
-- Op macOS/Linux: zorg dat het bestand executable permissions heeft
+- Download de executable files, niet de source code ZIP
+- Op Windows: mogelijk Windows Defender waarschuwing (klik "Meer info" → "Toch uitvoeren")
+- Op macOS/Linux: zorg dat het bestand executable permissions heeft (`chmod +x`)
+
+**Flet/UI problemen**
+- Zorg dat je een actieve internetverbinding hebt bij eerste start
+- Bij problemen: herstart de applicatie
+- Controleer of Flet dependencies correct zijn geïnstalleerd
 
 **Data kwijt**
 - Data wordt opgeslagen in `portfolio_data.json`
@@ -199,4 +239,4 @@ Dit project is gelicentieerd onder de MIT License - zie het [LICENSE](LICENSE) b
 
 **Gemaakt met ❤️ voor HU Technische Informatica studenten**
 
-*Versie 1.0 - Ontwikkeld door Rick van der Voort*
+*Versie 1.5.0 - Powered by Flet - Ontwikkeld door Rick van der Voort*

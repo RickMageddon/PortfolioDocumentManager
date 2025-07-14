@@ -44,7 +44,6 @@ en dit project volgt [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Planned Features
 - 🔐 GitHub integratie voor automatische link validatie
 - 📊 Portfolio voortgang dashboard
-- 🎨 Custom PDF themes
 - 🔄 Automatische backup functionaliteit
 - 📧 Email export van documenten
 - 🌍 Meertalige ondersteuning

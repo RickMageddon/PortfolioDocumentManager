@@ -1,0 +1,178 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact-name: PortfolioManager-windows.exe
+            icon: icon.ico
+          - os: macos-latest
+            artifact-name: PortfolioManager-darwin
+            icon: icon.png
+          - os: ubuntu-latest
+            artifact-name: PortfolioManager-linux
+            icon: icon.png
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install system dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libgtk-3-dev \
+          libwebkit2gtk-4.0-dev \
+          libappindicator3-dev \
+          librsvg2-dev \
+          libcairo2-dev \
+          libpango1.0-dev \
+          libgdk-pixbuf2.0-dev \
+          libatk1.0-dev
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller flet markdown weasyprint
+
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --windowed --name ${{ matrix.artifact-name }} --icon=${{ matrix.icon }} main_flet.py
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ matrix.artifact-name }}
+        path: dist/${{ matrix.artifact-name }}*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: artifacts
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref_name }}
+        release_name: Portfolio Document Manager ${{ github.ref_name }}
+        body: |
+          ## 🎉 Portfolio Document Manager v1.5.0
+
+          ### ✨ Major Updates - Flet UI Overhaul
+
+          This release marks a complete transition from Tkinter to **Flet** for a modern, responsive user interface!
+
+          ### 🚀 New Features
+
+          - **🌐 Multilingual Support**: Complete Dutch/English language switching with flag dropdown
+          - **🎨 Modern Flet UI**: Completely rewritten interface using Google's Flet framework
+          - **🌙 Dark/Light Mode**: Toggle between light and dark themes
+          - **📱 Responsive Design**: Better layout that adapts to different screen sizes
+          - **🖱️ Improved UX**: Centered layouts, better spacing, and professional appearance
+          - **⚡ Real-time Language Switching**: UI updates immediately when switching languages
+          - **🔄 Enhanced Navigation**: Improved menu structure with dropdown organization
+
+          ### 🛠️ Technical Improvements
+
+          - **Complete Flet Migration**: Moved from Tkinter to Flet for modern web-based UI
+          - **Translation System**: Comprehensive `get_text()` system for all UI elements
+          - **Better State Management**: Improved data handling and UI updates
+          - **Cross-platform Compatibility**: Better support for Windows, macOS, and Linux
+          - **GitHub Actions**: Automated building and releasing for all platforms
+
+          ### 📋 Enhanced Features
+
+          - **Portfolio Management**: Add, edit, and manage portfolio items with ease
+          - **Feedback System**: Comprehensive feedback tracking per learning outcome
+          - **Document Generation**: PDF and Markdown export with proper formatting
+          - **Learning Outcomes Info**: Detailed information about all learning outcomes
+          - **Student Info Management**: Easy student data configuration
+
+          ### 🐛 Bug Fixes
+
+          - Fixed date handling for portfolio items
+          - Improved error handling and validation
+          - Better form validation and user feedback
+          - Resolved document generation issues
+          - Fixed attention card width consistency
+
+          ### 📦 Download
+
+          Choose the version for your operating system:
+          - **Windows**: `PortfolioManager-windows.exe`
+          - **macOS**: `PortfolioManager-darwin`
+          - **Linux**: `PortfolioManager-linux`
+
+          ### 🔧 Installation
+
+          1. Download the appropriate executable for your platform
+          2. Run the executable (no installation required)
+          3. Fill in your student information on first launch
+          4. Start managing your portfolio!
+
+          ### 💻 Development
+
+          This version uses **main_flet.py** as the primary entry point. The legacy Tkinter version (`main.py`) is now deprecated.
+
+          ---
+
+          **Full Changelog**: https://github.com/RickMageddon/PijlDocumentProgram/compare/v1.4.0...v1.5.0
+        draft: false
+        prerelease: false
+
+    - name: Upload Windows Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: artifacts/PortfolioManager-windows.exe/PortfolioManager-windows.exe
+        asset_name: PortfolioManager-windows.exe
+        asset_content_type: application/octet-stream
+
+    - name: Upload macOS Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: artifacts/PortfolioManager-darwin/PortfolioManager-darwin
+        asset_name: PortfolioManager-darwin
+        asset_content_type: application/octet-stream
+
+    - name: Upload Linux Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: artifacts/PortfolioManager-linux/PortfolioManager-linux
+        asset_name: PortfolioManager-linux
+        asset_content_type: application/octet-stream

@@ -54,7 +54,7 @@ def create_executable():
         '--name', exe_name,
         '--clean',
         '--noconfirm',
-        'main.py'
+        'main_flet.py'
     ]
     
     print(f"🔨 Building {exe_name}...")
@@ -134,8 +134,8 @@ def main():
     print("🚀 Preparing Portfolio Document Manager for release...")
     
     # Check if we're in the right directory
-    if not os.path.exists('main.py'):
-        print("❌ main.py not found. Run this script from the project root.")
+    if not os.path.exists('main_flet.py'):
+        print("❌ main_flet.py not found. Run this script from the project root.")
         return 1
     
     # Clean previous builds

@@ -13,6 +13,7 @@ def install_requirements():
     """Install required packages for building"""
     requirements = [
         'pyinstaller',
+        'flet',
         'markdown',
         'weasyprint'
     ]
@@ -42,7 +43,7 @@ def build_executable():
         '--onefile',
         '--windowed',
         '--name', f'PortfolioManager-{system}',
-        'main.py'
+        'main_flet.py'
     ]
     
     # Add icon if available

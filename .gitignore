@@ -1,8 +1,12 @@
 # Template document - should not be committed
 Verantwoordingsdocument_TI_S4.md
 
+# Legacy Tkinter version (replaced by Flet version)
+main.py
+
 # Setup/development files (not for end users)
 GITHUB_UPLOAD_INSTRUCTIONS.md
+test_flet.py
 
 # Generated documents
 Verantwoordingsdocument_*.pdf
