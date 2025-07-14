@@ -1,0 +1,160 @@
+name: Build and Release Portfolio Manager
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            extension: .exe
+            icon: icon.ico
+          - os: macos-latest
+            platform: darwin
+            extension: ""
+            icon: icon.png
+          - os: ubuntu-latest
+            platform: linux
+            extension: ""
+            icon: icon.png
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install system dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libgtk-3-dev \
+          libwebkit2gtk-4.0-dev \
+          libappindicator3-dev \
+          librsvg2-dev \
+          libcairo2-dev \
+          libpango1.0-dev \
+          libgdk-pixbuf2.0-dev \
+          libatk1.0-dev
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Build executable with PyInstaller
+      run: |
+        pyinstaller --onefile --windowed \
+          --name "PortfolioManager-${{ matrix.platform }}" \
+          --icon="${{ matrix.icon }}" \
+          main_flet.py
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: PortfolioManager-${{ matrix.platform }}
+        path: dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}
+        retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+
+    - name: Display artifact structure
+      run: |
+        echo "=== Artifact Directory Structure ==="
+        find artifacts/ -type f -exec ls -la {} \;
+        echo "=== End Structure ==="
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          artifacts/PortfolioManager-windows/PortfolioManager-windows.exe
+          artifacts/PortfolioManager-darwin/PortfolioManager-darwin
+          artifacts/PortfolioManager-linux/PortfolioManager-linux
+        name: Portfolio Document Manager ${{ github.ref_name }}
+        body: |
+          ## 🎉 Portfolio Document Manager ${{ github.ref_name }}
+
+          ### ✨ Major Updates - Modern Flet UI
+
+          Complete transition from Tkinter to **Flet** for a modern, cross-platform user interface!
+
+          ### 🚀 New Features
+
+          - **🎨 Modern Flet UI**: Beautiful interface using Google's Flet framework
+          - **🌐 Multi-language Support**: Dutch/English language switching
+          - **🌙 Dark/Light Mode**: Toggle between themes
+          - **📱 Responsive Design**: Adapts to different screen sizes
+          - **⚡ Real-time Updates**: Instant UI language switching
+          - **🔄 Enhanced Navigation**: Improved menu structure
+
+          ### 🛠️ Technical Improvements
+
+          - **Modern Framework**: Flet-based UI for future compatibility
+          - **Translation System**: Comprehensive multi-language support
+          - **Better Performance**: Improved state management
+          - **Cross-platform**: Consistent experience across OS platforms
+          - **Automated CI/CD**: GitHub Actions build pipeline
+
+          ### 📋 Core Features
+
+          - **Portfolio Management**: Add, edit, and organize portfolio items
+          - **Feedback System**: Track feedback per learning outcome
+          - **Document Generation**: Export to PDF and Markdown
+          - **Learning Outcomes**: Detailed information and examples
+          - **Student Data**: Easy configuration management
+
+          ### 📦 Downloads
+
+          Choose your platform:
+          - **Windows**: `PortfolioManager-windows.exe`
+          - **macOS**: `PortfolioManager-darwin`
+          - **Linux**: `PortfolioManager-linux`
+
+          ### 🔧 Installation
+
+          1. Download the executable for your platform
+          2. Run the executable (no installation required)
+          3. Configure your student information
+          4. Start managing your portfolio!
+
+          ### 💻 Development Notes
+
+          - Primary entry: `main_flet.py`
+          - Legacy version: `main.py` (deprecated)
+          - Requirements: See `requirements.txt`
+
+          ---
+          
+          **🔗 Repository**: https://github.com/RickMageddon/PijlDocumentProgram
+        draft: false
+        prerelease: false
+        fail_on_unmatched_files: false
+        token: ${{ secrets.GITHUB_TOKEN }}
