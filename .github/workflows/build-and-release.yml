@@ -45,15 +45,20 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y \
+          xvfb \
           libgtk-3-dev \
           libcairo2-dev \
-          libpango1.0-dev
+          libpango1.0-dev \
+          libgdk-pixbuf2.0-dev \
+          libasound2-dev \
+          libwebkit2gtk-4.0-dev \
+          libgstreamer1.0-dev \
+          libgstreamer-plugins-base1.0-dev
 
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install auto-py-to-exe
 
     - name: Test Flet import
       run: |
@@ -66,42 +71,47 @@ jobs:
         echo "OS: ${{ matrix.os }}"
         pip list | grep -E "(flet|pyinstaller)"
         
-    - name: Build executable with PyInstaller
-      shell: bash
+    - name: Build executable using build.py
       run: |
-        # Simple PyInstaller command without complex Flet options
-        pyinstaller \
-          --onefile \
-          --windowed \
-          --name "PortfolioManager-${{ matrix.platform }}" \
-          --icon="${{ matrix.icon }}" \
-          --add-data "requirements.txt:." \
-          main_flet.py
+        echo "Building using build.py script..."
+        python build.py
       continue-on-error: true
       
     - name: Alternative build attempt if first failed
       if: failure()
-      shell: bash
       run: |
-        echo "First build failed, trying alternative approach..."
-        # Try without icon and windowed flags
-        pyinstaller \
-          --onefile \
-          --name "PortfolioManager-${{ matrix.platform }}" \
-          main_flet.py
+        echo "First build failed, trying simple PyInstaller approach..."
+        pyinstaller --onefile --name "PortfolioManager-${{ matrix.platform }}" main_flet.py
         
     - name: Check build output
       run: |
         echo "=== Build directory contents ==="
         ls -la dist/ || echo "No dist directory"
-        echo "=== Target file check ==="
-        ls -la "dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}" || echo "Target file not found"
+        echo "=== All files in dist ==="
+        find dist/ -type f -name "*" || echo "No files found"
+
+    - name: Copy and rename artifact if needed
+      shell: bash
+      run: |
+        echo "Looking for built artifacts..."
+        find dist/ -name "PortfolioManager*" -type f | head -1 | while read file; do
+          if [ -n "$file" ]; then
+            cp "$file" "dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}"
+            echo "Copied $file to PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}"
+          fi
+        done
+        echo "Final artifact check:"
+        ls -la dist/ || echo "No dist directory"
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
         name: PortfolioManager-${{ matrix.platform }}
-        path: dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}
+        path: |
+          dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}
+          dist/PortfolioManager-linux${{ matrix.extension }}
+          dist/PortfolioManager-darwin${{ matrix.extension }}
+          dist/PortfolioManager-windows${{ matrix.extension }}
         retention-days: 30
 
   release:
