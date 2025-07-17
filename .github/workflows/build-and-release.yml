@@ -109,13 +109,17 @@ jobs:
           built_file=$(find dist/ -name "PortfolioManager*" -type f | head -1)
           expected_name="dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}"
           
-          if [ -n "$built_file" ] && [ "$built_file" != "$expected_name" ]; then
+          if [ -n "$built_file" ]; then
             echo "Found: $built_file"
             echo "Expected: $expected_name"
-            cp "$built_file" "$expected_name"
-            echo "Copied $built_file to $expected_name"
-          elif [ -n "$built_file" ]; then
-            echo "File already has correct name: $built_file"
+            
+            # Only copy if files are different (avoid cp identical file error)
+            if [ "$built_file" != "$expected_name" ]; then
+              cp "$built_file" "$expected_name"
+              echo "Copied $built_file to $expected_name"
+            else
+              echo "File already has correct name: $built_file"
+            fi
           else
             echo "No built files found"
           fi
@@ -130,12 +134,9 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: PortfolioManager-${{ matrix.platform }}
-        path: |
-          dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}
-          dist/PortfolioManager-linux${{ matrix.extension }}
-          dist/PortfolioManager-darwin${{ matrix.extension }}
-          dist/PortfolioManager-windows${{ matrix.extension }}
+        path: dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}
         retention-days: 30
+        if-no-files-found: warn
 
   release:
     needs: build

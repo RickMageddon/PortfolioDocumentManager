@@ -30,6 +30,15 @@ def build_executable():
     """Build executable using PyInstaller"""
     system = platform.system().lower()
     
+    # Map platform names to match GitHub Actions matrix
+    platform_mapping = {
+        'windows': 'windows',
+        'darwin': 'darwin', 
+        'linux': 'linux'
+    }
+    
+    platform_name = platform_mapping.get(system, system)
+    
     # Determine icon file
     icon_file = None
     if system == 'windows' and os.path.exists('icon.ico'):
@@ -42,7 +51,7 @@ def build_executable():
         'pyinstaller',
         '--onefile',
         '--windowed',
-        '--name', f'PortfolioManager-{system}',
+        '--name', f'PortfolioManager-{platform_name}',
         'main_flet.py'
     ]
     
@@ -52,10 +61,10 @@ def build_executable():
     
     try:
         subprocess.check_call(cmd)
-        print(f"✅ Build successful for {system}")
+        print(f"✅ Build successful for {platform_name}")
         return True
     except subprocess.CalledProcessError:
-        print(f"❌ Build failed for {system}")
+        print(f"❌ Build failed for {platform_name}")
         return False
 
 def main():
