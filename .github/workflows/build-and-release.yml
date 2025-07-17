@@ -105,23 +105,22 @@ jobs:
       run: |
         echo "Looking for built artifacts..."
         if [ -d "dist" ]; then
-          # Find the first built executable
-          built_file=$(find dist/ -name "PortfolioManager*" -type f | head -1)
           expected_name="dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}"
           
-          if [ -n "$built_file" ]; then
-            echo "Found: $built_file"
-            echo "Expected: $expected_name"
-            
-            # Only copy if files are different (avoid cp identical file error)
-            if [ "$built_file" != "$expected_name" ]; then
-              cp "$built_file" "$expected_name"
-              echo "Copied $built_file to $expected_name"
-            else
-              echo "File already has correct name: $built_file"
-            fi
+          # Check if the expected file already exists
+          if [ -f "$expected_name" ]; then
+            echo "✅ Target file already exists: $expected_name"
           else
-            echo "No built files found"
+            # Find any built executable and copy it to expected name
+            built_file=$(find dist/ -name "PortfolioManager*" -type f | head -1)
+            if [ -n "$built_file" ]; then
+              echo "Found: $built_file"
+              echo "Copying to: $expected_name"
+              cp "$built_file" "$expected_name"
+              echo "✅ Copied successfully"
+            else
+              echo "❌ No built files found"
+            fi
           fi
           
           echo "Final artifact check:"
