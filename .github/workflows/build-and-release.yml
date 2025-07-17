@@ -51,9 +51,9 @@ jobs:
           libpango1.0-dev \
           libgdk-pixbuf2.0-dev \
           libasound2-dev \
-          libwebkit2gtk-4.0-dev \
-          libgstreamer1.0-dev \
-          libgstreamer-plugins-base1.0-dev
+          libglib2.0-dev \
+          libffi-dev \
+          shared-mime-info
 
     - name: Install Python dependencies
       run: |
@@ -79,29 +79,52 @@ jobs:
       
     - name: Alternative build attempt if first failed
       if: failure()
+      shell: bash
       run: |
         echo "First build failed, trying simple PyInstaller approach..."
-        pyinstaller --onefile --name "PortfolioManager-${{ matrix.platform }}" main_flet.py
+        python -m PyInstaller --onefile --name "PortfolioManager-${{ matrix.platform }}" main_flet.py
         
     - name: Check build output
+      shell: bash
       run: |
         echo "=== Build directory contents ==="
-        ls -la dist/ || echo "No dist directory"
+        if [ -d "dist" ]; then
+          ls -la dist/
+        else
+          echo "No dist directory"
+        fi
         echo "=== All files in dist ==="
-        find dist/ -type f -name "*" || echo "No files found"
+        if [ -d "dist" ]; then
+          find dist/ -type f -name "*"
+        else
+          echo "No files found"
+        fi
 
     - name: Copy and rename artifact if needed
       shell: bash
       run: |
         echo "Looking for built artifacts..."
-        find dist/ -name "PortfolioManager*" -type f | head -1 | while read file; do
-          if [ -n "$file" ]; then
-            cp "$file" "dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}"
-            echo "Copied $file to PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}"
+        if [ -d "dist" ]; then
+          # Find the first built executable
+          built_file=$(find dist/ -name "PortfolioManager*" -type f | head -1)
+          expected_name="dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}"
+          
+          if [ -n "$built_file" ] && [ "$built_file" != "$expected_name" ]; then
+            echo "Found: $built_file"
+            echo "Expected: $expected_name"
+            cp "$built_file" "$expected_name"
+            echo "Copied $built_file to $expected_name"
+          elif [ -n "$built_file" ]; then
+            echo "File already has correct name: $built_file"
+          else
+            echo "No built files found"
           fi
-        done
-        echo "Final artifact check:"
-        ls -la dist/ || echo "No dist directory"
+          
+          echo "Final artifact check:"
+          ls -la dist/
+        else
+          echo "No dist directory found"
+        fi
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
