@@ -200,34 +200,38 @@ jobs:
         body: |
           ## 🎉 Portfolio Document Manager ${{ github.ref_name }}
 
-          ### ✨ Major Updates - Modern Flet UI
+          ### ✨ Latest Updates - Enhanced User Experience
 
-          Complete transition from Tkinter to **Flet** for a modern, cross-platform user interface!
+          Improved window sizing and user interface optimizations for better usability!
 
-          ### 🚀 New Features
+          ### 🚀 New Features & Improvements
 
-          - **🎨 Modern Flet UI**: Beautiful interface using Google's Flet framework
+          - **🖥️ Enhanced Window Size**: Larger default window (1400x1200px) for better content display
+          - **📏 Improved Layout**: Better spacing for portfolio tables and interface elements
+          - **🎯 Tooltips System**: Hover help for learning outcomes with descriptions and examples
+          - **📝 Radio Button Feedback**: Single-selection feedback system for better data consistency
+          - **📅 Date/Time Display**: Timestamps in feedback overview for better tracking
           - **🌐 Multi-language Support**: Dutch/English language switching
           - **🌙 Dark/Light Mode**: Toggle between themes
           - **📱 Responsive Design**: Adapts to different screen sizes
-          - **⚡ Real-time Updates**: Instant UI language switching
-          - **🔄 Enhanced Navigation**: Improved menu structure
 
           ### 🛠️ Technical Improvements
 
-          - **Modern Framework**: Flet-based UI for future compatibility
-          - **Translation System**: Comprehensive multi-language support
-          - **Better Performance**: Improved state management
-          - **Cross-platform**: Consistent experience across OS platforms
-          - **Automated CI/CD**: GitHub Actions build pipeline
+          - **Modern Flet Framework**: Beautiful, cross-platform UI
+          - **Better Window Management**: Improved default sizing and minimum constraints
+          - **Enhanced Navigation**: Improved menu structure and user flow
+          - **Tooltip Integration**: Contextual help throughout the application
+          - **Feedback System**: Radio buttons for single-selection feedback
+          - **Cross-platform**: Consistent experience across all OS platforms
 
           ### 📋 Core Features
 
-          - **Portfolio Management**: Add, edit, and organize portfolio items
-          - **Feedback System**: Track feedback per learning outcome
-          - **Document Generation**: Export to PDF and Markdown
-          - **Learning Outcomes**: Detailed information and examples
+          - **Portfolio Management**: Add, edit, and organize portfolio items with tooltips
+          - **Feedback System**: Track feedback per learning outcome with date/time stamps
+          - **Document Generation**: Export to PDF and Markdown formats
+          - **Learning Outcomes**: Detailed information with examples and tooltips
           - **Student Data**: Easy configuration management
+          - **Multi-language**: Dutch and English interface support
 
           ### 📦 Downloads
 
@@ -245,13 +249,14 @@ jobs:
 
           ### 💻 Development Notes
 
-          - Primary entry: `main_flet.py`
-          - Legacy version: `main.py` (deprecated)
+          - Main application: `main_flet.py`
+          - Build script: `build.py`
           - Requirements: See `requirements.txt`
+          - Desktop integration files included for Linux
 
           ---
           
-          **🔗 Repository**: https://github.com/RickMageddon/PijlDocumentProgram
+          **🔗 Repository**: https://github.com/RickMageddon/PortfolioDocumentManager
         draft: false
         prerelease: false
         fail_on_unmatched_files: false

@@ -6,6 +6,7 @@ Een programma voor het beheren van portfolio items voor het TI S4 verantwoording
 import flet as ft
 import json
 import os
+import sys
 import datetime
 import webbrowser
 import markdown
@@ -18,10 +19,16 @@ class PortfolioManager:
         self.page = page
         self.page.title = "Portfolio Document Manager - TI"
         self.page.theme_mode = ft.ThemeMode.LIGHT
-        self.page.window_width = 1000
-        self.page.window_height = 700
-        self.page.window_min_width = 800
-        self.page.window_min_height = 600
+        self.page.window_width = 1400
+        self.page.window_height = 1200
+        self.page.window_min_width = 1200
+        self.page.window_min_height = 900
+        
+        # Ensure the window is visible and properly configured
+        self.page.window_visible = True
+        self.page.window_resizable = True
+        self.page.window_maximizable = True
+        self.page.window_minimizable = True
         
         # Data storage
         self.data_file = "portfolio_data.json"
@@ -146,7 +153,7 @@ class PortfolioManager:
                 "examples_label": "Voorbeelden van opdrachten:",
                 # About page
                 "about_title": "Over Portfolio Document Manager",
-                "version_label": "Versie: 1.5.0",
+                "version_label": "Versie: 1.5.5",
                 "about_description": "Een moderne desktop applicatie voor het beheren van portfolio documenten",
                 "developed_by": "Ontwikkeld door:",
                 "copyright": "© 2025 Rick van der Voort - Portfolio Document Manager",
@@ -306,7 +313,7 @@ class PortfolioManager:
                 "examples_label": "Examples of assignments:",
                 # About page
                 "about_title": "About Portfolio Document Manager",
-                "version_label": "Version: 1.5.0",
+                "version_label": "Version: 1.5.5",
                 "about_description": "A modern desktop application for managing portfolio documents",
                 "developed_by": "Developed by:",
                 "copyright": "© 2025 Rick van der Voort - Portfolio Document Manager",
@@ -596,7 +603,7 @@ class PortfolioManager:
                             ft.Container(
                                 content=self.portfolio_data_table,
                                 height=400,
-                                alignment=ft.alignment.center
+                                alignment=ft.alignment.top_center
                             )
                         ]),
                         padding=20
@@ -619,13 +626,19 @@ class PortfolioManager:
 
     def show_back_button(self):
         """Create a back button"""
+        # Check if student info is complete
+        student_info_complete = bool(self.student_info and 
+                                   self.student_info.get("name") and 
+                                   self.student_info.get("student_number"))
+        
         return ft.ElevatedButton(
             text=f"← {self.get_text('btn_back')}",
             icon=ft.Icons.ARROW_BACK,
-            on_click=lambda e: self.show_main_view(),
+            on_click=lambda e: self.show_main_view() if student_info_complete else None,
+            disabled=not student_info_complete,
             style=ft.ButtonStyle(
-                bgcolor=ft.Colors.GREY_600,
-                color=ft.Colors.WHITE
+                bgcolor=ft.Colors.GREY_600 if student_info_complete else ft.Colors.GREY_300,
+                color=ft.Colors.WHITE if student_info_complete else ft.Colors.GREY_500
             )
         )
 
@@ -658,7 +671,7 @@ class PortfolioManager:
         semester_dropdown = ft.Dropdown(
             label=self.get_text("semester_label"),
             options=[ft.dropdown.Option(str(i)) for i in range(2, 9)],
-            value=self.student_info.get("semester", "4"),
+            value=self.student_info.get("semester", "2"),
             width=400
         )
         milestone_dropdown = ft.Dropdown(
@@ -727,14 +740,18 @@ class PortfolioManager:
             width=600
         )
         
-        # Learning outcomes checkboxes
+        # Learning outcomes checkboxes with tooltips
         lo_checkboxes = {}
         lo_controls = []
         
         for lo_num, lo_data in self.learning_outcomes.items():
+            # Create tooltip text with description and examples
+            tooltip_text = f"Beschrijving: {lo_data['description']}\n\nVoorbeelden: {', '.join(lo_data['examples'])}"
+            
             checkbox = ft.Checkbox(
                 label=f"LU{lo_num}: {lo_data['title']}",
-                value=lo_num in existing_item.get('learning_outcomes', []) if existing_item else False
+                value=lo_num in existing_item.get('learning_outcomes', []) if existing_item else False,
+                tooltip=tooltip_text
             )
             lo_checkboxes[lo_num] = checkbox
             lo_controls.append(checkbox)
@@ -903,14 +920,13 @@ class PortfolioManager:
             width=600
         )
         
-        # Learning outcomes checkboxes for the selected item
-        lo_checkboxes = {}
-        lo_column = ft.Column([], spacing=5)
+        # Learning outcomes radio group for the selected item  
+        lo_radio_group = ft.RadioGroup(content=ft.Column([], spacing=5))
         
         def update_learning_outcomes(e):
             """Update learning outcomes based on selected portfolio item"""
             if not portfolio_dropdown.value:
-                lo_column.controls.clear()
+                lo_radio_group.content.controls.clear()
                 self.page.update()
                 return
             
@@ -918,17 +934,19 @@ class PortfolioManager:
             selected_item = self.portfolio_items[selected_index]
             available_los = selected_item.get('learning_outcomes', [])
             
-            lo_column.controls.clear()
-            lo_checkboxes.clear()
+            lo_radio_group.content.controls.clear()
             
             for lo_num in available_los:
                 lo_data = self.learning_outcomes[lo_num]
-                checkbox = ft.Checkbox(
+                # Create tooltip text with description and examples
+                tooltip_text = f"Beschrijving: {lo_data['description']}\n\nVoorbeelden: {', '.join(lo_data['examples'])}"
+                
+                radio = ft.Radio(
+                    value=str(lo_num),
                     label=f"LU{lo_num}: {lo_data['title']}",
-                    value=False
+                    tooltip=tooltip_text
                 )
-                lo_checkboxes[lo_num] = checkbox
-                lo_column.controls.append(checkbox)
+                lo_radio_group.content.controls.append(radio)
             
             self.page.update()
         
@@ -959,12 +977,12 @@ class PortfolioManager:
                 self.page.update()
                 return
             
-            selected_los = [lo_num for lo_num, checkbox in lo_checkboxes.items() if checkbox.value]
-            if not selected_los:
-                error_text.value = "⚠️ Selecteer minimaal één leeruitkomst voor de feedback!"
+            selected_lo = lo_radio_group.value
+            if not selected_lo:
+                error_text.value = "⚠️ Selecteer een leeruitkomst voor de feedback!"
                 error_text.visible = True
                 success_text.visible = False
-                self.page.update()
+                self.page.update()  
                 return
             
             if not feedback_from_field.value or not feedback_text_field.value:
@@ -980,7 +998,7 @@ class PortfolioManager:
             feedback_entry = {
                 "from": feedback_from_field.value.strip(),
                 "text": feedback_text_field.value.strip(),
-                "learning_outcomes": selected_los,
+                "learning_outcomes": [int(selected_lo)],  # Only one learning outcome now
                 "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
             }
             
@@ -1000,7 +1018,8 @@ class PortfolioManager:
             feedback_from_field.value = ""
             feedback_text_field.value = ""
             portfolio_dropdown.value = None
-            lo_column.controls.clear()
+            lo_radio_group.content.controls.clear()
+            lo_radio_group.value = None
             
             self.page.update()
         
@@ -1015,9 +1034,9 @@ class PortfolioManager:
                         error_text,
                         success_text,
                         portfolio_dropdown,
-                        ft.Text(self.get_text("select_learning_outcomes_feedback"), weight=ft.FontWeight.BOLD),
+                        ft.Text("Selecteer een leeruitkomst voor deze feedback:", weight=ft.FontWeight.BOLD),
                         ft.Container(
-                            content=lo_column,
+                            content=lo_radio_group,
                             height=150,
                             bgcolor=ft.Colors.GREY_50,
                             border_radius=5,
@@ -1052,18 +1071,23 @@ class PortfolioManager:
         selected_item = self.portfolio_items[item_index]
         available_los = selected_item.get('learning_outcomes', [])
         
-        # Learning outcomes checkboxes for the selected item
-        lo_checkboxes = {}
-        lo_controls = []
-        
+        # Learning outcomes radio buttons for the selected item with tooltips
+        radio_buttons = []
         for lo_num in available_los:
             lo_data = self.learning_outcomes[lo_num]
-            checkbox = ft.Checkbox(
+            # Create tooltip text with description and examples
+            tooltip_text = f"Beschrijving: {lo_data['description']}\n\nVoorbeelden: {', '.join(lo_data['examples'])}"
+            
+            radio = ft.Radio(
+                value=str(lo_num),
                 label=f"LU{lo_num}: {lo_data['title']}",
-                value=False
+                tooltip=tooltip_text
             )
-            lo_checkboxes[lo_num] = checkbox
-            lo_controls.append(checkbox)
+            radio_buttons.append(radio)
+        
+        lo_radio_group = ft.RadioGroup(
+            content=ft.Column(radio_buttons, spacing=5)
+        )
         
         # Feedback fields
         feedback_from_field = ft.TextField(
@@ -1083,9 +1107,9 @@ class PortfolioManager:
         success_text = ft.Text("", color=ft.Colors.GREEN, visible=False)
         
         def save_feedback(e):
-            selected_los = [lo_num for lo_num, checkbox in lo_checkboxes.items() if checkbox.value]
-            if not selected_los:
-                error_text.value = "⚠️ Selecteer minimaal één leeruitkomst voor de feedback!"
+            selected_lo = lo_radio_group.value
+            if not selected_lo:
+                error_text.value = "⚠️ Selecteer een leeruitkomst voor de feedback!"
                 error_text.visible = True
                 success_text.visible = False
                 self.page.update()
@@ -1102,7 +1126,7 @@ class PortfolioManager:
             feedback_entry = {
                 "from": feedback_from_field.value.strip(),
                 "text": feedback_text_field.value.strip(),
-                "learning_outcomes": selected_los,
+                "learning_outcomes": [int(selected_lo)],  # Only one learning outcome now
                 "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
             }
             
@@ -1121,10 +1145,7 @@ class PortfolioManager:
             # Clear form
             feedback_from_field.value = ""
             feedback_text_field.value = ""
-            
-            # Uncheck all checkboxes
-            for checkbox in lo_checkboxes.values():
-                checkbox.value = False
+            lo_radio_group.value = None
             
             self.page.update()
         
@@ -1140,8 +1161,8 @@ class PortfolioManager:
                                size=14, color=ft.Colors.GREY_600),
                         error_text,
                         success_text,
-                        ft.Text("Selecteer leeruitkomsten voor deze feedback:", weight=ft.FontWeight.BOLD),
-                        ft.Column(lo_controls, spacing=5),
+                        ft.Text("Selecteer een leeruitkomst voor deze feedback:", weight=ft.FontWeight.BOLD),
+                        lo_radio_group,
                         feedback_from_field,
                         feedback_text_field,
                         ft.Row([
@@ -1191,9 +1212,13 @@ class PortfolioManager:
                                         ft.Row([
                                             ft.Text(f"Van: {feedback.get('from', 'Onbekend')}", 
                                                    weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700),
+                                            ft.Text(f"Datum: {feedback.get('date', 'Onbekend')}", 
+                                                   color=ft.Colors.GREY_600, size=12)
+                                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                                        ft.Row([
                                             ft.Text(f"LU: {', '.join([f'{lo}' for lo in feedback.get('learning_outcomes', [])])}", 
                                                    color=ft.Colors.BLUE_600, size=12)
-                                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                                        ]),
                                         ft.Text(feedback.get('text', ''), 
                                                size=14, color=ft.Colors.BLACK87)
                                     ], spacing=5),
@@ -1544,7 +1569,7 @@ class PortfolioManager:
         semester_dropdown = ft.Dropdown(
             label="Semester (2-8)",
             options=[ft.dropdown.Option(str(i)) for i in range(2, 9)],
-            value=self.student_info.get("semester", "4"),
+            value=self.student_info.get("semester", "2"),
             width=350
         )
         milestone_dropdown = ft.Dropdown(
@@ -2321,7 +2346,212 @@ class PortfolioManager:
 
 
 def main(page: ft.Page):
-    app = PortfolioManager(page)
+    """Main entry point for the Flet application"""
+    try:
+        # Force window to be visible and properly configured
+        page.window_visible = True
+        page.window_prevent_close = True
+        page.window_always_on_top = False
+        page.window_focused = True
+        
+        # Set window icon - try multiple methods for Linux compatibility
+        icon_paths = [
+            "icon.png",
+            "assets/icon.png",
+            "/home/rick/Documents/Code/PortfolioDocumentManager/icon.png",
+            os.path.join(os.path.dirname(__file__), "icon.png") if hasattr(sys, '_MEIPASS') else "icon.png",
+            os.path.join(sys._MEIPASS, "icon.png") if hasattr(sys, '_MEIPASS') else None
+        ]
+        
+        icon_set = False
+        for icon_path in icon_paths:
+            if icon_path and os.path.exists(icon_path):
+                try:
+                    page.window_icon = icon_path
+                    print(f"Window icon set to: {icon_path}")
+                    icon_set = True
+                    break
+                except Exception as e:
+                    print(f"Failed to set icon {icon_path}: {e}")
+                    continue
+        
+        if not icon_set:
+            print("Warning: Could not set window icon")
+        
+        # Ensure the window appears on screen (window_center not available in this Flet version)
+        
+        print("Initializing Portfolio Manager...")
+        
+        # Initialize the application
+        app = PortfolioManager(page)
+        
+        # Try to set window properties after initialization for Linux
+        if os.name == 'posix':  # Linux/Unix
+            try:
+                # Set additional window properties for better Linux integration
+                page.window_title_bar_hidden = False
+                page.window_title_bar_buttons_hidden = False
+                
+                # Force window class name for better desktop integration
+                if hasattr(page, 'window_class_name'):
+                    page.window_class_name = "PortfolioManager"
+                
+                # Try setting icon again after initialization
+                if os.path.exists("icon.png"):
+                    page.window_icon = "icon.png"
+                elif os.path.exists("/home/rick/Documents/Code/PortfolioDocumentManager/icon.png"):
+                    page.window_icon = "/home/rick/Documents/Code/PortfolioDocumentManager/icon.png"
+                    
+                page.update()
+                print("Linux-specific window properties set")
+            except Exception as e:
+                print(f"Could not set Linux window properties: {e}")
+        
+        # Handle window close event
+        def on_window_event(e):
+            if e.data == "close":
+                print("Application closing...")
+                page.window_destroy()
+        
+        page.window_on_event = on_window_event
+        
+        # Force update to ensure window is visible
+        page.update()
+        
+        print("Portfolio Manager initialized successfully!")
+        
+    except Exception as e:
+        print(f"Error initializing app: {e}")
+        import traceback
+        traceback.print_exc()
+        
+        # Create a simple error page that's definitely visible
+        page.title = "Portfolio Document Manager - Error"
+        page.window_visible = True
+        # page.window_center() not available in this Flet version
+        page.clean()
+        
+        error_text = ft.Text(
+            f"Error starting application:\n{str(e)}\n\nCheck the console for more details.", 
+            color=ft.Colors.RED,
+            size=16,
+            selectable=True
+        )
+        
+        page.add(ft.Container(
+            content=ft.Column([
+                ft.Text("Portfolio Document Manager", size=24, weight=ft.FontWeight.BOLD),
+                ft.Divider(),
+                error_text,
+                ft.ElevatedButton(
+                    "Close Application",
+                    on_click=lambda e: page.window_close()
+                )
+            ], spacing=20),
+            padding=20,
+            alignment=ft.alignment.center,
+            expand=True
+        ))
+        page.update()
+
+def check_environment():
+    """Check if the environment is suitable for running the app"""
+    import platform
+    
+    system = platform.system()
+    print(f"Running on {system} {platform.release()}")
+    
+    if system == "Linux":
+        # Check for display
+        display = os.environ.get('DISPLAY')
+        if not display:
+            print("Warning: No DISPLAY environment variable set")
+            print("Setting DISPLAY=:0")
+            os.environ['DISPLAY'] = ':0'
+        else:
+            print(f"DISPLAY is set to: {display}")
+        
+        # Check for Wayland
+        wayland_display = os.environ.get('WAYLAND_DISPLAY')
+        if wayland_display:
+            print(f"Wayland display detected: {wayland_display}")
+        
+        # Check XDG session type
+        session_type = os.environ.get('XDG_SESSION_TYPE', 'unknown')
+        print(f"Session type: {session_type}")
+    
+    return True
+
+def safe_flet_app(target, view, **kwargs):
+    """Safely start Flet app"""
+    print("Starting Flet application...")
+    return ft.app(target=target, view=view, **kwargs)
 
 if __name__ == "__main__":
-    ft.app(target=main)
+    print("=" * 50)
+    print("Starting Portfolio Document Manager...")
+    print("=" * 50)
+    
+    # Check environment
+    check_environment()
+    
+    # Set Flet environment variables to ensure proper desktop mode
+    os.environ['FLET_VIEW'] = 'flet_app'
+    os.environ['FLET_FORCE_WEB_SERVER'] = 'false'
+    os.environ['FLET_WEB_RENDERER'] = 'html'
+    
+    # First try: Native desktop application
+    try:
+        print("Starting as native desktop application...")
+        safe_flet_app(
+            target=main,
+            view=ft.AppView.FLET_APP,
+            assets_dir="assets" if os.path.exists("assets") else None,
+            upload_dir="uploads" if os.path.exists("uploads") else None
+        )
+    except Exception as e:
+        print(f"Native desktop failed: {e}")
+        
+        # Check if it's the libmpv error specifically
+        error_str = str(e).lower()
+        if "libmpv" in error_str or "mpv" in error_str or "cannot open shared object file" in error_str:
+            print("\n" + "="*50)
+            print("MISSING SYSTEM LIBRARIES")
+            print("="*50)
+            print("The Portfolio Manager requires the libmpv library.")
+            print("This library is used by Flet for media support.")
+            print("\nTo install libmpv:")
+            print("Ubuntu/Debian: sudo apt install libmpv1")
+            print("CentOS/RHEL: sudo yum install mpv-libs") 
+            print("Fedora: sudo dnf install mpv-libs")
+            print("Arch: sudo pacman -S mpv")
+            print("\nAlternatively, contact your system administrator")
+            print("to install the required libraries.")
+            print("\nThe application cannot start without this library.")
+            print("="*50)
+            sys.exit(1)
+        elif "display" in error_str or "x11" in error_str or "wayland" in error_str:
+            print("\n" + "="*50)
+            print("DISPLAY SERVER ISSUE")
+            print("="*50)
+            print("Cannot connect to your display server.")
+            print("\nSolutions:")
+            print("1. Make sure you're in a desktop environment")
+            print("2. If using SSH: ssh -X username@hostname")
+            print("3. Set DISPLAY: export DISPLAY=:0")
+            print("4. Allow X11: xhost +local:")
+            print("="*50)
+            sys.exit(1)
+        else:
+            print("\n" + "="*50)
+            print("APPLICATION STARTUP FAILED")
+            print("="*50)
+            print("Unknown error occurred:")
+            print(f"  {str(e)}")
+            print("\nSystem information:")
+            print(f"- OS: {os.uname().sysname} {os.uname().release}")
+            print(f"- Desktop: {os.environ.get('XDG_CURRENT_DESKTOP', 'Unknown')}")
+            print(f"- Session: {os.environ.get('XDG_SESSION_TYPE', 'Unknown')}")
+            print(f"- Display: {os.environ.get('DISPLAY', 'Not set')}")
+            print("="*50)
+            sys.exit(1)

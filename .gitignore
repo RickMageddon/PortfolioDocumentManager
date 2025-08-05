@@ -7,13 +7,18 @@ main.py
 # Setup/development files (not for end users)
 GITHUB_UPLOAD_INSTRUCTIONS.md
 test_flet.py
+test_*.py
+simple_start.py
+test_environment.py
+test_minimal_flet.py
+test_web_mode.py
 
 # Generated documents
 Verantwoordingsdocument_*.pdf
 Verantwoordingsdocument_*.md
 temp_verantwoordingsdocument_*.md
 
-# Portfolio data
+# Portfolio data (user-specific)
 portfolio_data.json
 
 # Build and release files
@@ -45,3 +50,13 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Development and testing files
+launch_linux.sh
+start_linux.sh
+portfolio-manager-launcher.sh
+portfolio-manager-python.sh
+install.sh
+uninstall.sh
+release.py
+check_deps.py
