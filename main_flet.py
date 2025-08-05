@@ -153,7 +153,7 @@ class PortfolioManager:
                 "examples_label": "Voorbeelden van opdrachten:",
                 # About page
                 "about_title": "Over Portfolio Document Manager",
-                "version_label": "Versie: 1.5.6",
+                "version_label": "Versie: 1.5.7",
                 "about_description": "Een moderne desktop applicatie voor het beheren van portfolio documenten",
                 "developed_by": "Ontwikkeld door:",
                 "copyright": "© 2025 Rick van der Voort - Portfolio Document Manager",
@@ -313,7 +313,7 @@ class PortfolioManager:
                 "examples_label": "Examples of assignments:",
                 # About page
                 "about_title": "About Portfolio Document Manager",
-                "version_label": "Version: 1.5.6",
+                "version_label": "Version: 1.5.7",
                 "about_description": "A modern desktop application for managing portfolio documents",
                 "developed_by": "Developed by:",
                 "copyright": "© 2025 Rick van der Voort - Portfolio Document Manager",
@@ -2482,76 +2482,49 @@ def check_environment():
     
     return True
 
-def safe_flet_app(target, view, **kwargs):
-    """Safely start Flet app"""
-    print("Starting Flet application...")
-    return ft.app(target=target, view=view, **kwargs)
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("Starting Portfolio Document Manager...")
+    print("Portfolio Document Manager v1.5.7")
     print("=" * 50)
     
-    # Check environment
-    check_environment()
+    # Prevent Flet from auto-installing packages
+    os.environ['FLET_SKIP_PACKAGE_INSTALL'] = 'true'
+    os.environ['FLET_OFFLINE_MODE'] = 'true'
     
-    # Set Flet environment variables to ensure proper desktop mode
-    os.environ['FLET_VIEW'] = 'flet_app'
-    os.environ['FLET_FORCE_WEB_SERVER'] = 'false'
-    os.environ['FLET_WEB_RENDERER'] = 'html'
-    
-    # First try: Native desktop application
     try:
-        print("Starting as native desktop application...")
-        safe_flet_app(
+        # Check environment
+        check_environment()
+        
+        print("Initializing application...")
+        
+        # Start the application with minimal configuration
+        ft.app(
             target=main,
             view=ft.AppView.FLET_APP,
-            assets_dir="assets" if os.path.exists("assets") else None,
-            upload_dir="uploads" if os.path.exists("uploads") else None
+            assets_dir="assets" if os.path.exists("assets") else None
         )
-    except Exception as e:
-        print(f"Native desktop failed: {e}")
         
-        # Check if it's the libmpv error specifically
+    except ImportError as e:
+        print(f"\nIMPORT ERROR: {e}")
+        print("\nRequired Python packages are missing.")
+        print("Please ensure all dependencies are installed:")
+        print("pip install flet markdown weasyprint")
+        sys.exit(1)
+        
+    except Exception as e:
+        print(f"\nAPPLICATION ERROR: {e}")
+        
         error_str = str(e).lower()
-        if "libmpv" in error_str or "mpv" in error_str or "cannot open shared object file" in error_str:
-            print("\n" + "="*50)
-            print("MISSING SYSTEM LIBRARIES")
-            print("="*50)
-            print("The Portfolio Manager requires the libmpv library.")
-            print("This library is used by Flet for media support.")
-            print("\nTo install libmpv:")
-            print("Ubuntu/Debian: sudo apt install libmpv1")
-            print("CentOS/RHEL: sudo yum install mpv-libs") 
-            print("Fedora: sudo dnf install mpv-libs")
-            print("Arch: sudo pacman -S mpv")
-            print("\nAlternatively, contact your system administrator")
-            print("to install the required libraries.")
-            print("\nThe application cannot start without this library.")
-            print("="*50)
-            sys.exit(1)
-        elif "display" in error_str or "x11" in error_str or "wayland" in error_str:
-            print("\n" + "="*50)
-            print("DISPLAY SERVER ISSUE")
-            print("="*50)
-            print("Cannot connect to your display server.")
-            print("\nSolutions:")
-            print("1. Make sure you're in a desktop environment")
-            print("2. If using SSH: ssh -X username@hostname")
-            print("3. Set DISPLAY: export DISPLAY=:0")
-            print("4. Allow X11: xhost +local:")
-            print("="*50)
-            sys.exit(1)
+        if "libmpv" in error_str or "cannot open shared object file" in error_str:
+            print("\nSystem library missing: libmpv")
+            print("Install with: sudo apt install libmpv1")
+        elif "display" in error_str or "x11" in error_str:
+            print("\nDisplay server connection failed.")
+            print("Make sure you're running in a desktop environment.")
         else:
-            print("\n" + "="*50)
-            print("APPLICATION STARTUP FAILED")
-            print("="*50)
-            print("Unknown error occurred:")
-            print(f"  {str(e)}")
-            print("\nSystem information:")
-            print(f"- OS: {os.uname().sysname} {os.uname().release}")
-            print(f"- Desktop: {os.environ.get('XDG_CURRENT_DESKTOP', 'Unknown')}")
-            print(f"- Session: {os.environ.get('XDG_SESSION_TYPE', 'Unknown')}")
-            print(f"- Display: {os.environ.get('DISPLAY', 'Not set')}")
-            print("="*50)
-            sys.exit(1)
+            print(f"\nUnexpected error occurred.")
+            print(f"Error details: {str(e)}")
+        
+        print("\nApplication cannot start. Exiting...")
+        sys.exit(1)

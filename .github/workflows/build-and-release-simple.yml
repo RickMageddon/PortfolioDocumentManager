@@ -51,6 +51,11 @@ jobs:
       run: |
         pyinstaller --onefile --windowed --name PortfolioManager-${{ matrix.platform }} main_flet.py
 
+    - name: Set execute permissions for Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        chmod +x dist/PortfolioManager-${{ matrix.platform }}
+
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
