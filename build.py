@@ -50,7 +50,7 @@ def build_executable():
         windowed_flag = '--windowed' if system == 'darwin' else '--console'
         icon_file = 'icon.png' if os.path.exists('icon.png') else None
     
-    # Basic PyInstaller command
+    # Enhanced PyInstaller command with Flet dependencies
     cmd = [
         'pyinstaller',
         '--onefile',
@@ -58,7 +58,18 @@ def build_executable():
         '--name', 'portfolio-manager-temp',  # Temporary name
         '--distpath', './dist',
         '--workpath', './build',
-        '--specpath', './build'
+        '--specpath', './build',
+        '--collect-all', 'flet',  # Collect all Flet files
+        '--collect-all', 'flet_core',  # Collect Flet core files
+        '--hidden-import', 'flet',
+        '--hidden-import', 'flet_core',
+        '--hidden-import', 'flet.fastapi',
+        '--hidden-import', 'websockets',
+        '--hidden-import', 'uvicorn',
+        '--hidden-import', 'starlette',
+        '--hidden-import', 'httpx',
+        '--add-data', f'flet{os.pathsep}flet',  # Include Flet data
+        '--noconfirm'  # Don't ask for confirmation
     ]
     
     # Add icon if available

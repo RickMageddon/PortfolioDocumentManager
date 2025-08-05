@@ -153,7 +153,7 @@ class PortfolioManager:
                 "examples_label": "Voorbeelden van opdrachten:",
                 # About page
                 "about_title": "Over Portfolio Document Manager",
-                "version_label": "Versie: 1.5.10",
+                "version_label": "Versie: 1.5.11",
                 "about_description": "Een moderne desktop applicatie voor het beheren van portfolio documenten",
                 "developed_by": "Ontwikkeld door:",
                 "copyright": "© 2025 Rick van der Voort - Portfolio Document Manager",
@@ -313,7 +313,7 @@ class PortfolioManager:
                 "examples_label": "Examples of assignments:",
                 # About page
                 "about_title": "About Portfolio Document Manager",
-                "version_label": "Version: 1.5.10",
+                "version_label": "Version: 1.5.11",
                 "about_description": "A modern desktop application for managing portfolio documents",
                 "developed_by": "Developed by:",
                 "copyright": "© 2025 Rick van der Voort - Portfolio Document Manager",
@@ -2490,32 +2490,27 @@ if __name__ == "__main__":
     sys.modules[__name__]._app_started = True
     
     print("=" * 50)
-    print("Portfolio Document Manager v1.5.10")
+    print("Portfolio Document Manager v1.5.11")
     print("=" * 50)
     
     try:
         # Check environment first
         check_environment()
         
-        print("Starting application...")
+        # Set environment variables for better Flet compatibility
+        os.environ["FLET_WEB_APP_PATH"] = ""
+        os.environ["FLET_SERVER_PORT"] = "0"  # Use random available port
         
-        # Try web view first as it's more stable on Linux
-        try:
-            ft.app(
-                target=main,
-                view=ft.AppView.WEB_BROWSER,
-                port=8550,
-                host="127.0.0.1"
-            )
-        except Exception as web_error:
-            print(f"Web browser mode failed: {web_error}")
-            print("Trying desktop mode...")
-            
-            # Fallback to desktop mode
-            ft.app(
-                target=main,
-                view=ft.AppView.FLET_APP
-            )
+        print("Starting desktop application...")
+        
+        # Only use desktop mode for better PyInstaller compatibility
+        ft.app(
+            target=main,
+            view=ft.AppView.FLET_APP,  # Force desktop app only
+            assets_dir="assets" if os.path.exists("assets") else None,
+            port=0,  # Use random available port
+            web_renderer="html"  # Use HTML renderer for better compatibility
+        )
         
     except KeyboardInterrupt:
         print("\nApplication interrupted by user.")
@@ -2525,7 +2520,7 @@ if __name__ == "__main__":
         print(f"\nIMPORT ERROR: {e}")
         print("\nRequired Python packages are missing.")
         print("Please ensure all dependencies are installed:")
-        print("pip install flet markdown weasyprint")
+        print("pip install flet flet-core markdown weasyprint")
         sys.exit(1)
         
     except Exception as e:
@@ -2539,10 +2534,12 @@ if __name__ == "__main__":
             print("\nDisplay server connection failed.")
             print("Make sure you're running in a desktop environment.")
         elif "name 'exit' is not defined" in error_str:
-            print("\nInternal error in Flet framework.")
-            print("This is a known issue with the Flet package.")
+            print("\nInternal error in Flet framework detected.")
+            print("This is a known compatibility issue.")
+            # Don't attempt fallback - just exit cleanly
+            print("Application cannot start with current configuration.")
         elif "address already in use" in error_str:
-            print("\nPort 8550 is already in use.")
+            print("\nPort conflict detected.")
             print("Please close any other instances of the application.")
         else:
             print(f"\nUnexpected error occurred.")
