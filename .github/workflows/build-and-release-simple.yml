@@ -1,0 +1,161 @@
+name: Build and Release Portfolio Manager (Simple)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+  
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            extension: .exe
+          - os: macos-latest
+            platform: macos
+            extension: ""
+          - os: ubuntu-latest
+            platform: linux
+            extension: ""
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0
+
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --windowed --name PortfolioManager-${{ matrix.platform }} main_flet.py
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: PortfolioManager-${{ matrix.platform }}
+        path: dist/PortfolioManager-${{ matrix.platform }}${{ matrix.extension }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+    
+    - name: List downloaded files (debug)
+      run: |
+        echo "Downloaded artifacts:"
+        find artifacts -type f -name "*" -exec ls -la {} \; || echo "No files found"
+        echo "Directory structure:"
+        tree artifacts/ || ls -la artifacts/ || echo "No artifacts directory"
+        echo "Current directory:"
+        pwd
+        ls -la
+    
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          artifacts/PortfolioManager-windows/PortfolioManager-windows.exe
+          artifacts/PortfolioManager-macos/PortfolioManager-macos
+          artifacts/PortfolioManager-linux/PortfolioManager-linux
+        body: |
+          ## 🎉 Portfolio Document Manager ${{ github.ref_name }}
+          
+          ### ✨ Latest Updates - Enhanced User Experience
+          
+          Improved window sizing and user interface optimizations for better usability!
+          
+          ### 🚀 New Features & Improvements
+          
+          • 🖥️ Enhanced Window Size: Larger default window (1400x1200px) for better content display
+          • 📏 Improved Layout: Better spacing for portfolio tables and interface elements  
+          • 🎯 Tooltips System: Hover help for learning outcomes with descriptions and examples
+          • 📝 Radio Button Feedback: Single-selection feedback system for better data consistency
+          • 📅 Date/Time Display: Timestamps in feedback overview for better tracking
+          • 🌐 Multi-language Support: Dutch/English language switching
+          • 🌙 Dark/Light Mode: Toggle between themes
+          • 📱 Responsive Design: Adapts to different screen sizes
+          
+          ### 🛠️ Technical Improvements
+          
+          • Modern Flet Framework: Beautiful, cross-platform UI
+          • Better Window Management: Improved default sizing and minimum constraints
+          • Enhanced Navigation: Improved menu structure and user flow
+          • Tooltip Integration: Contextual help throughout the application
+          • Feedback System: Radio buttons for single-selection feedback
+          • Cross-platform: Consistent experience across all OS platforms
+          
+          ### 📋 Core Features
+          
+          • Portfolio Management: Add, edit, and organize portfolio items with tooltips
+          • Feedback System: Track feedback per learning outcome with date/time stamps
+          • Document Generation: Export to PDF and Markdown formats
+          • Learning Outcomes: Detailed information with examples and tooltips
+          • Student Data: Easy configuration management
+          • Multi-language: Dutch and English interface support
+          
+          ### 📦 Downloads
+          
+          Choose your platform:
+          
+          • Windows: `PortfolioManager-windows.exe`
+          • macOS: `PortfolioManager-macos`
+          • Linux: `PortfolioManager-linux`
+          
+          ### 🔧 Installation
+          
+          1. Download the executable for your platform
+          2. On macOS/Linux: `chmod +x PortfolioManager-*`
+          3. Start the application
+          
+          ### 💻 Development Notes
+          
+          • Main application: `main_flet.py`
+          • Build script: `build.py`
+          • Requirements: See `requirements.txt`
+          • Desktop integration files included for Linux
+          
+          --------
+          
+          🔗 Repository: https://github.com/RickMageddon/PortfolioDocumentManager
+        draft: false
+        prerelease: false
+        fail_on_unmatched_files: false
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload build artifacts (for manual runs)
+      if: github.event_name == 'workflow_dispatch'
+      uses: actions/upload-artifact@v4
+      with:
+        name: all-executables-combined
+        path: artifacts/*/
