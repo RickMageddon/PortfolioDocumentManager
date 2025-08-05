@@ -19,7 +19,7 @@ os.environ['PIP_NO_INPUT'] = '1'
 
 class PortfolioManagerStandalone:
     def __init__(self):
-        self.version = "1.5.9"
+        self.version = "1.5.10"
         self.data_file = "portfolio_data.json"
         self.student_info = {}
         self.portfolio_items = []
