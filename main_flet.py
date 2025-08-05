@@ -153,7 +153,7 @@ class PortfolioManager:
                 "examples_label": "Voorbeelden van opdrachten:",
                 # About page
                 "about_title": "Over Portfolio Document Manager",
-                "version_label": "Versie: 1.5.7",
+                "version_label": "Versie: 1.5.8",
                 "about_description": "Een moderne desktop applicatie voor het beheren van portfolio documenten",
                 "developed_by": "Ontwikkeld door:",
                 "copyright": "© 2025 Rick van der Voort - Portfolio Document Manager",
@@ -313,7 +313,7 @@ class PortfolioManager:
                 "examples_label": "Examples of assignments:",
                 # About page
                 "about_title": "About Portfolio Document Manager",
-                "version_label": "Version: 1.5.7",
+                "version_label": "Version: 1.5.8",
                 "about_description": "A modern desktop application for managing portfolio documents",
                 "developed_by": "Developed by:",
                 "copyright": "© 2025 Rick van der Voort - Portfolio Document Manager",
@@ -2484,26 +2484,42 @@ def check_environment():
 
 
 if __name__ == "__main__":
-    print("=" * 50)
-    print("Portfolio Document Manager v1.5.7")
-    print("=" * 50)
+    # Single startup guard to prevent loops
+    if hasattr(sys.modules[__name__], '_app_started'):
+        sys.exit(0)
+    sys.modules[__name__]._app_started = True
     
-    # Prevent Flet from auto-installing packages
-    os.environ['FLET_SKIP_PACKAGE_INSTALL'] = 'true'
-    os.environ['FLET_OFFLINE_MODE'] = 'true'
+    print("=" * 50)
+    print("Portfolio Document Manager v1.5.8")
+    print("=" * 50)
     
     try:
-        # Check environment
+        # Check environment first
         check_environment()
         
-        print("Initializing application...")
+        print("Starting application...")
         
-        # Start the application with minimal configuration
-        ft.app(
-            target=main,
-            view=ft.AppView.FLET_APP,
-            assets_dir="assets" if os.path.exists("assets") else None
-        )
+        # Try web view first as it's more stable on Linux
+        try:
+            ft.app(
+                target=main,
+                view=ft.AppView.WEB_BROWSER,
+                port=8550,
+                host="127.0.0.1"
+            )
+        except Exception as web_error:
+            print(f"Web browser mode failed: {web_error}")
+            print("Trying desktop mode...")
+            
+            # Fallback to desktop mode
+            ft.app(
+                target=main,
+                view=ft.AppView.FLET_APP
+            )
+        
+    except KeyboardInterrupt:
+        print("\nApplication interrupted by user.")
+        sys.exit(0)
         
     except ImportError as e:
         print(f"\nIMPORT ERROR: {e}")
@@ -2522,9 +2538,15 @@ if __name__ == "__main__":
         elif "display" in error_str or "x11" in error_str:
             print("\nDisplay server connection failed.")
             print("Make sure you're running in a desktop environment.")
+        elif "name 'exit' is not defined" in error_str:
+            print("\nInternal error in Flet framework.")
+            print("This is a known issue with the Flet package.")
+        elif "address already in use" in error_str:
+            print("\nPort 8550 is already in use.")
+            print("Please close any other instances of the application.")
         else:
             print(f"\nUnexpected error occurred.")
             print(f"Error details: {str(e)}")
         
-        print("\nApplication cannot start. Exiting...")
+        print("\nApplication cannot start.")
         sys.exit(1)
