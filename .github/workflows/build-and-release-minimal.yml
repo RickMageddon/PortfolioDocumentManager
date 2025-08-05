@@ -1,0 +1,121 @@
+name: Build and Release Portfolio Manager (Minimal)
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            extension: ".exe"
+            icon: icon.ico
+          - os: macos-latest
+            platform: darwin
+            extension: ""
+            icon: icon.png
+          - os: ubuntu-latest
+            platform: linux
+            extension: ""
+            icon: icon.png
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flet pyinstaller
+
+    - name: Install system dependencies (Ubuntu)
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0
+
+    - name: Build minimal executable
+      run: |
+        pyinstaller --onefile --windowed --name PortfolioManager-${{ matrix.platform }}-minimal --icon ${{ matrix.icon }} --hidden-import flet --hidden-import flet_core --hidden-import flet.app --hidden-import flet.core.page --hidden-import flet.core.control --hidden-import flet.core.colors --exclude-module flet.core.icons --hidden-import websockets --hidden-import uvicorn --hidden-import starlette --hidden-import httpx --hidden-import json --hidden-import datetime --hidden-import os --hidden-import sys --hidden-import platform --noconfirm main_flet_minimal.py
+
+    - name: Set execute permissions for Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        chmod +x dist/PortfolioManager-${{ matrix.platform }}-minimal
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: PortfolioManager-${{ matrix.platform }}-minimal
+        path: dist/PortfolioManager-${{ matrix.platform }}-minimal${{ matrix.extension }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+    
+    - name: List downloaded files (debug)
+      run: |
+        echo "Downloaded artifacts:"
+        find artifacts -type f -name "*" -exec ls -la {} \; || echo "No files found"
+        echo "Directory structure:"
+        tree artifacts/ || ls -la artifacts/ || echo "No artifacts directory"
+    
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          artifacts/PortfolioManager-windows-minimal/PortfolioManager-windows-minimal.exe
+          artifacts/PortfolioManager-darwin-minimal/PortfolioManager-darwin-minimal
+          artifacts/PortfolioManager-linux-minimal/PortfolioManager-linux-minimal
+        body: |
+          ## 🎉 Portfolio Document Manager ${{ github.ref_name }} (Minimal)
+          
+          ### 🐧 Linux Compatibility Fix
+          - **Minimal Flet Version**: Avoids Icons enum loading issues that cause PyInstaller crashes
+          - **No Complex Icons**: Uses text-based buttons to prevent enum loading problems
+          - **Essential Features**: Core portfolio management functionality
+          - **Smaller Size**: Reduced executable size due to minimal dependencies
+          
+          ### ✨ Features
+          - ✅ Student information management
+          - ✅ Portfolio item creation and editing
+          - ✅ Learning outcomes tracking
+          - ✅ Data persistence (JSON)
+          - ✅ Cross-platform compatibility
+          
+          ### 📦 Downloads (Minimal Version)
+          Choose your platform:
+          - **Windows**: `PortfolioManager-windows-minimal.exe`
+          - **macOS**: `PortfolioManager-darwin-minimal`
+          - **Linux**: `PortfolioManager-linux-minimal`
+          
+          ### 🔧 Installation
+          1. Download the minimal executable for your platform
+          2. On macOS/Linux: `chmod +x PortfolioManager-*-minimal`
+          3. Run the executable
+          4. Configure your student information
+          5. Start managing your portfolio!
+          
+          **Note**: This is a minimal version designed to fix Linux compatibility issues. It uses text buttons instead of icons to avoid PyInstaller enum loading problems.
+        draft: false
+        prerelease: false
