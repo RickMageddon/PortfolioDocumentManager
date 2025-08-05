@@ -1,5 +1,6 @@
 flet>=0.21.0
 flet-core>=0.21.0
+flet-runtime>=0.21.0
 markdown>=3.4.0
 weasyprint>=59.0
 pyinstaller>=5.13.0
@@ -7,3 +8,5 @@ websockets>=11.0
 uvicorn>=0.23.0
 starlette>=0.27.0
 httpx>=0.24.0
+fastapi>=0.100.0
+typing-extensions>=4.0.0

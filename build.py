@@ -50,7 +50,7 @@ def build_executable():
         windowed_flag = '--windowed' if system == 'darwin' else '--console'
         icon_file = 'icon.png' if os.path.exists('icon.png') else None
     
-    # Enhanced PyInstaller command with Flet dependencies
+    # Enhanced PyInstaller command with comprehensive Flet dependencies
     cmd = [
         'pyinstaller',
         '--onefile',
@@ -59,16 +59,53 @@ def build_executable():
         '--distpath', './dist',
         '--workpath', './build',
         '--specpath', './build',
-        '--collect-all', 'flet',  # Collect all Flet files
-        '--collect-all', 'flet_core',  # Collect Flet core files
+        # Collect all Flet related packages
+        '--collect-all', 'flet',
+        '--collect-all', 'flet_core',
+        '--collect-all', 'flet_runtime',
+        '--collect-submodules', 'flet',
+        '--collect-submodules', 'flet_core',
+        # Hidden imports for all Flet components
         '--hidden-import', 'flet',
         '--hidden-import', 'flet_core',
+        '--hidden-import', 'flet_runtime',
+        '--hidden-import', 'flet.app',
+        '--hidden-import', 'flet.core',
+        '--hidden-import', 'flet.core.page',
+        '--hidden-import', 'flet.core.control',
+        '--hidden-import', 'flet.core.icons',
+        '--hidden-import', 'flet.core.types',
+        '--hidden-import', 'flet.core.colors',
+        '--hidden-import', 'flet.core.text_style',
+        '--hidden-import', 'flet.core.border',
+        '--hidden-import', 'flet.core.box',
+        '--hidden-import', 'flet.core.badge',
+        '--hidden-import', 'flet.core.adaptive_control',
         '--hidden-import', 'flet.fastapi',
+        '--hidden-import', 'flet.utils',
+        # Web server dependencies
         '--hidden-import', 'websockets',
+        '--hidden-import', 'websockets.server',
+        '--hidden-import', 'websockets.client',
         '--hidden-import', 'uvicorn',
+        '--hidden-import', 'uvicorn.main',
+        '--hidden-import', 'uvicorn.server',
         '--hidden-import', 'starlette',
+        '--hidden-import', 'starlette.applications',
+        '--hidden-import', 'starlette.routing',
         '--hidden-import', 'httpx',
-        '--add-data', f'flet{os.pathsep}flet',  # Include Flet data
+        '--hidden-import', 'httpx._client',
+        # Additional system dependencies
+        '--hidden-import', 'asyncio',
+        '--hidden-import', 'threading',
+        '--hidden-import', 'json',
+        '--hidden-import', 'datetime',
+        '--hidden-import', 'enum',
+        '--hidden-import', 'typing',
+        '--hidden-import', 'pathlib',
+        '--hidden-import', 'os',
+        '--hidden-import', 'sys',
+        '--hidden-import', 'platform',
         '--noconfirm'  # Don't ask for confirmation
     ]
     
