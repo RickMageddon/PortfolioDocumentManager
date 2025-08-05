@@ -10,8 +10,6 @@ import os
 import json
 import datetime
 import webbrowser
-import markdown
-import weasyprint
 from typing import Dict, List, Optional
 
 # Set environment variables before Flet import to optimize loading
