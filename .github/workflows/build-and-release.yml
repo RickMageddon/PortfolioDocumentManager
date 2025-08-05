@@ -85,8 +85,37 @@ jobs:
       if: failure()
       shell: bash
       run: |
-        echo "First build failed, trying simple PyInstaller approach..."
-        python -m PyInstaller --onefile --name "PortfolioManager-${{ matrix.platform }}" main_flet.py
+        echo "First build failed, trying direct PyInstaller approach..."
+        
+        # Determine platform-specific settings
+        if [ "${{ matrix.platform }}" = "windows" ]; then
+          EXECUTABLE_NAME="PortfolioManager-${{ matrix.platform }}.exe"
+          PYINSTALLER_FLAGS="--windowed --icon=icon.ico"
+        elif [ "${{ matrix.platform }}" = "darwin" ]; then
+          EXECUTABLE_NAME="PortfolioManager-${{ matrix.platform }}"
+          PYINSTALLER_FLAGS="--windowed --icon=icon.png"
+        else
+          EXECUTABLE_NAME="PortfolioManager-${{ matrix.platform }}"
+          PYINSTALLER_FLAGS="--console"
+        fi
+        
+        # Run PyInstaller directly
+        python -m PyInstaller --onefile $PYINSTALLER_FLAGS \
+          --name "portfolio-manager-direct" \
+          --add-data "icon.png:." \
+          main_flet.py
+          
+        # Rename the output file to expected name
+        if [ -f "dist/portfolio-manager-direct${{ matrix.extension }}" ]; then
+          mv "dist/portfolio-manager-direct${{ matrix.extension }}" "dist/$EXECUTABLE_NAME"
+          echo "✅ Direct build successful: $EXECUTABLE_NAME"
+        elif [ -f "dist/portfolio-manager-direct" ]; then
+          mv "dist/portfolio-manager-direct" "dist/$EXECUTABLE_NAME"
+          echo "✅ Direct build successful: $EXECUTABLE_NAME"
+        else
+          echo "❌ Direct build also failed"
+          ls -la dist/ || echo "No dist directory"
+        fi
       env:
         PYTHONIOENCODING: utf-8
         
