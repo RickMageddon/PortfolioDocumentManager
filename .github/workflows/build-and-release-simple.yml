@@ -52,20 +52,7 @@ jobs:
 
     - name: Build executable
       run: |
-        pyinstaller --onefile --windowed \
-          --name PortfolioManager-${{ matrix.platform }} \
-          --icon ${{ matrix.icon }} \
-          --collect-all flet \
-          --collect-all flet_core \
-          --hidden-import flet \
-          --hidden-import flet_core \
-          --hidden-import flet.fastapi \
-          --hidden-import websockets \
-          --hidden-import uvicorn \
-          --hidden-import starlette \
-          --hidden-import httpx \
-          --noconfirm \
-          main_flet.py
+        pyinstaller --onefile --windowed --name PortfolioManager-${{ matrix.platform }} --icon ${{ matrix.icon }} --collect-all flet --collect-all flet_core --hidden-import flet --hidden-import flet_core --hidden-import flet.fastapi --hidden-import websockets --hidden-import uvicorn --hidden-import starlette --hidden-import httpx --noconfirm main_flet.py
 
     - name: Set execute permissions for Linux
       if: matrix.os == 'ubuntu-latest'
