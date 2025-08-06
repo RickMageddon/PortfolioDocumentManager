@@ -153,7 +153,7 @@ class PortfolioManager:
                 "examples_label": "Voorbeelden van opdrachten:",
                 # About page
                 "about_title": "Over Portfolio Document Manager",
-                "version_label": "Versie: 1.5.14",
+                "version_label": "Versie: 1.5.15",
                 "about_description": "Een moderne desktop applicatie voor het beheren van portfolio documenten",
                 "developed_by": "Ontwikkeld door:",
                 "copyright": "© 2025 Rick van der Voort - Portfolio Document Manager",
@@ -313,7 +313,7 @@ class PortfolioManager:
                 "examples_label": "Examples of assignments:",
                 # About page
                 "about_title": "About Portfolio Document Manager",
-                "version_label": "Version: 1.5.14",
+                "version_label": "Version: 1.5.15",
                 "about_description": "A modern desktop application for managing portfolio documents",
                 "developed_by": "Developed by:",
                 "copyright": "© 2025 Rick van der Voort - Portfolio Document Manager",
