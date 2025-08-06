@@ -5,7 +5,7 @@ Een moderne, cross-platform desktop applicatie voor het beheren van portfolio it
 ![Platform Support](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-1.5.0-brightgreen)
+![Version](https://img.shields.io/badge/version-1.5.15-brightgreen)
 
 ## ✨ Features
 
