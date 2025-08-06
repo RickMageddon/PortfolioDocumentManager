@@ -180,32 +180,6 @@ De applicatie gebruikt:
 - **PyInstaller**: Voor het bouwen van executables
 - **Andere**: Zie `requirements.txt` voor complete lijst
 
-## 🆘 Probleemoplossing
-
-### Veelvoorkomende Problemen
-
-**PDF generatie mislukt**
-- Zorg dat alle tekstvelden zijn ingevuld
-- Controleer of de reflectievragen zijn beantwoord
-
-**Applicatie start niet**
-- Controleer of je de juiste executable hebt gedownload voor je platform
-- Download de executable files, niet de source code ZIP
-- Op Windows: mogelijk Windows Defender waarschuwing (klik "Meer info" → "Toch uitvoeren")
-- Op macOS/Linux: zorg dat het bestand executable permissions heeft (`chmod +x`)
-
-**Flet/UI problemen**
-- Zorg dat je een actieve internetverbinding hebt bij eerste start
-- Bij problemen: herstart de applicatie
-- Controleer of Flet dependencies correct zijn geïnstalleerd
-
-**Data kwijt**
-- Data wordt opgeslagen in `portfolio_data.json`
-- Maak regelmatig backups via "Data exporteren"
-
-**Groepsleden veld verschijnt niet**
-- Selecteer eerst "Groepswerk" bij Type opdracht
-- Het veld verschijnt automatisch onder de radiobuttons
 
 ## 🤝 Bijdragen
 
