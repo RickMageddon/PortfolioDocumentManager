@@ -40,6 +40,77 @@ def build_executable():
     
     platform_name = platform_mapping.get(system, system)
     
+    # Check if we have a .spec file for fine-grained control
+    spec_file = 'portfolio-manager-safe.spec'
+    if os.path.exists(spec_file):
+        print(f"Using .spec file: {spec_file}")
+        
+        # Use spec file approach for better control
+        cmd = [
+            'pyinstaller',
+            '--distpath', './dist',
+            '--workpath', './build',
+            '--noconfirm',
+            spec_file
+        ]
+        
+        print(f"Building executable for {platform_name} using spec file...")
+        print(f"Command: {' '.join(cmd)}")
+        
+        try:
+            # Run PyInstaller with spec file
+            result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+            print("PyInstaller output:", result.stdout)
+            
+            # Find the generated executable
+            spec_exe = './dist/PortfolioManager-safe'
+            if system == 'windows':
+                spec_exe += '.exe'
+                
+            # Determine final name
+            final_name = f'PortfolioManager-{platform_name}'
+            if system == 'windows':
+                final_name += '.exe'
+            
+            # Rename if needed
+            final_path = f'./dist/{final_name}'
+            if os.path.exists(spec_exe):
+                if spec_exe != final_path:
+                    shutil.move(spec_exe, final_path)
+                print(f"✅ Successfully built: {final_path}")
+                
+                # Verify the file exists
+                if os.path.exists(final_path):
+                    size = os.path.getsize(final_path)
+                    print(f"✅ File size: {size} bytes")
+                    return True
+                else:
+                    print(f"❌ Final file not found: {final_path}")
+                    return False
+            else:
+                print(f"❌ Spec executable not found: {spec_exe}")
+                return False
+                
+        except subprocess.CalledProcessError as e:
+            print(f"❌ PyInstaller with spec failed: {e}")
+            print(f"Stderr: {e.stderr}")
+            return False
+    
+    else:
+        # Fallback to command line approach
+        print("No spec file found, using command line approach")
+        return build_executable_cmdline()
+
+def build_executable_cmdline():
+    """Build executable using command line PyInstaller (fallback)"""
+    system = platform.system().lower()
+    platform_mapping = {
+        'windows': 'windows',
+        'darwin': 'darwin', 
+        'linux': 'linux'
+    }
+    platform_name = platform_mapping.get(system, system)
+    
     # Determine final executable name with extension
     if system == 'windows':
         final_name = f'PortfolioManager-{platform_name}.exe'
@@ -50,7 +121,7 @@ def build_executable():
         windowed_flag = '--windowed' if system == 'darwin' else '--console'
         icon_file = 'icon.png' if os.path.exists('icon.png') else None
     
-    # Basic PyInstaller command
+    # Comprehensive PyInstaller command with Flet support and Icons fix
     cmd = [
         'pyinstaller',
         '--onefile',
@@ -58,7 +129,41 @@ def build_executable():
         '--name', 'portfolio-manager-temp',  # Temporary name
         '--distpath', './dist',
         '--workpath', './build',
-        '--specpath', './build'
+        '--specpath', './build',
+        # Flet specific flags
+        '--collect-all', 'flet',
+        '--collect-all', 'flet_core',
+        # Essential Flet imports (excluding problematic modules)
+        '--hidden-import', 'flet',
+        '--hidden-import', 'flet_core',
+        '--hidden-import', 'flet.app',
+        '--hidden-import', 'flet.core.page',
+        '--hidden-import', 'flet.core.control',
+        '--hidden-import', 'flet.core.colors',
+        '--hidden-import', 'flet.core.text_style',
+        '--hidden-import', 'flet.core.border',
+        '--hidden-import', 'flet.core.box',
+        '--hidden-import', 'flet.core.badge',
+        '--hidden-import', 'flet.core.adaptive_control',
+        '--hidden-import', 'flet.fastapi',
+        '--hidden-import', 'flet.utils',
+        # Web server dependencies
+        '--hidden-import', 'websockets',
+        '--hidden-import', 'uvicorn',
+        '--hidden-import', 'starlette',
+        '--hidden-import', 'httpx',
+        # System dependencies
+        '--hidden-import', 'asyncio',
+        '--hidden-import', 'threading',
+        '--hidden-import', 'json',
+        '--hidden-import', 'datetime',
+        '--hidden-import', 'typing',
+        '--hidden-import', 'pathlib',
+        # Include our safe icons module
+        '--hidden-import', 'safe_icons',
+        # Critical: Exclude the problematic icons module
+        '--exclude-module', 'flet.core.icons',
+        '--noconfirm'
     ]
     
     # Add icon if available
@@ -68,9 +173,12 @@ def build_executable():
     # Add data files
     if os.path.exists('icon.png'):
         cmd.extend(['--add-data', f'icon.png{os.pathsep}.'])
+    if os.path.exists('safe_icons.py'):
+        cmd.extend(['--add-data', f'safe_icons.py{os.pathsep}.'])
     
-    # Add main script
-    cmd.append('main_flet.py')
+    # Add main script (using safe version)
+    main_script = 'main_flet_safe.py' if os.path.exists('main_flet_safe.py') else 'main_flet.py'
+    cmd.append(main_script)
     
     print(f"Building executable for {platform_name}...")
     print(f"Command: {' '.join(cmd)}")
