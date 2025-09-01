@@ -10,8 +10,47 @@ import sys
 import datetime
 import webbrowser
 import markdown
-import weasyprint
 from typing import Dict, List, Optional
+
+# Windows-specific WeasyPrint import with fallback
+WEASYPRINT_AVAILABLE = False
+XHTML2PDF_AVAILABLE = False
+weasyprint = None
+
+try:
+    # Try to set up GTK path for Windows
+    if sys.platform == "win32":
+        gtk_paths = [
+            r"C:\Program Files\GTK3-Runtime Win64\bin",
+            r"C:\Program Files (x86)\GTK3-Runtime Win32\bin",
+            r"C:\msys64\mingw64\bin",
+            r"C:\msys64\mingw32\bin"
+        ]
+        
+        for gtk_path in gtk_paths:
+            if os.path.exists(gtk_path):
+                current_path = os.environ.get('PATH', '')
+                if gtk_path not in current_path:
+                    os.environ['PATH'] = gtk_path + os.pathsep + current_path
+                break
+    
+    import weasyprint
+    WEASYPRINT_AVAILABLE = True
+    print("WeasyPrint loaded successfully!")
+    
+except (ImportError, OSError) as e:
+    print(f"WeasyPrint not available: {e}")
+    
+    # Try fallback to xhtml2pdf
+    try:
+        from xhtml2pdf import pisa
+        XHTML2PDF_AVAILABLE = True
+        print("Using xhtml2pdf as fallback for PDF generation.")
+    except ImportError:
+        print("xhtml2pdf also not available. PDF export functionality will be disabled.")
+        
+    WEASYPRINT_AVAILABLE = False
+    weasyprint = None
 
 
 class PortfolioManager:
@@ -1819,17 +1858,25 @@ class PortfolioManager:
             
             # Generate PDF (always)
             try:
-                self.generate_pdf(temp_markdown_filename)
-                pdf_filename = temp_markdown_filename.replace('.md', '.pdf')
-                final_pdf_filename = f"Verantwoordingsdocument_{self.student_info.get('name', 'Student')}_{timestamp}.pdf"
-                os.rename(pdf_filename, final_pdf_filename)
-                generated_files.append(f"PDF: {final_pdf_filename}")
+                pdf_generated = self.generate_pdf(temp_markdown_filename)
+                if pdf_generated:
+                    pdf_filename = temp_markdown_filename.replace('.md', '.pdf')
+                    final_pdf_filename = f"Verantwoordingsdocument_{self.student_info.get('name', 'Student')}_{timestamp}.pdf"
+                    os.rename(pdf_filename, final_pdf_filename)
+                    generated_files.append(f"PDF: {final_pdf_filename}")
+                else:
+                    if not WEASYPRINT_AVAILABLE and not XHTML2PDF_AVAILABLE:
+                        generated_files.append("PDF: Skipped (No PDF libraries available)")
+                    else:
+                        generated_files.append("PDF: Failed to generate")
             except Exception as e:
-                self.show_error_dialog("PDF Generatie", f"PDF generatie is mislukt: {str(e)}")
-                # Clean up temp file
-                if os.path.exists(temp_markdown_filename):
-                    os.remove(temp_markdown_filename)
-                return
+                if WEASYPRINT_AVAILABLE or XHTML2PDF_AVAILABLE:
+                    self.show_error_dialog("PDF Generatie", f"PDF generatie is mislukt: {str(e)}")
+                else:
+                    generated_files.append("PDF: Skipped (No PDF libraries available)")
+                # Continue with markdown generation instead of returning
+                print(f"PDF generation error: {e}")
+            
             
             # Generate markdown file if requested
             if self.reflection_data.get('generate_markdown', False):
@@ -1947,7 +1994,12 @@ class PortfolioManager:
         return "\n".join(content)
 
     def generate_pdf(self, markdown_filename):
-        """Generate PDF from markdown using weasyprint (restored to main.py style)"""
+        """Generate PDF from markdown using weasyprint or xhtml2pdf fallback"""
+        if not WEASYPRINT_AVAILABLE and not XHTML2PDF_AVAILABLE:
+            print("No PDF libraries available. PDF generation skipped.")
+            print("Only Markdown file was generated.")
+            return False
+            
         with open(markdown_filename, 'r', encoding='utf-8') as f:
             markdown_content = f.read()
         html_content = markdown.markdown(markdown_content, extensions=['tables'])
@@ -1981,8 +2033,26 @@ class PortfolioManager:
         </body>
         </html>
         """
-        pdf_filename = markdown_filename.replace('.md', '.pdf')
-        weasyprint.HTML(string=html_with_css).write_pdf(pdf_filename)
+        
+        try:
+            pdf_filename = markdown_filename.replace('.md', '.pdf')
+            
+            if WEASYPRINT_AVAILABLE:
+                print("Using WeasyPrint for PDF generation...")
+                weasyprint.HTML(string=html_with_css).write_pdf(pdf_filename)
+            elif XHTML2PDF_AVAILABLE:
+                print("Using xhtml2pdf for PDF generation...")
+                from xhtml2pdf import pisa
+                with open(pdf_filename, "w+b") as result_file:
+                    pisa_status = pisa.CreatePDF(html_with_css, dest=result_file)
+                    if pisa_status.err:
+                        print(f"xhtml2pdf error: {pisa_status.err}")
+                        return False
+            
+            return True
+        except Exception as e:
+            print(f"Error generating PDF: {e}")
+            return False
 
     def load_data(self):
         """Load data from JSON file"""
