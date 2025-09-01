@@ -12,6 +12,14 @@ import webbrowser
 import markdown
 from typing import Dict, List, Optional
 
+# Canvas LMS Integration
+try:
+    from canvas_integration import CanvasIntegration, CanvasConfig
+    CANVAS_AVAILABLE = True
+except ImportError:
+    CANVAS_AVAILABLE = False
+    print("Canvas integration not available - install requests library")
+
 # Windows-specific WeasyPrint import with fallback
 WEASYPRINT_AVAILABLE = False
 XHTML2PDF_AVAILABLE = False
@@ -75,6 +83,13 @@ class PortfolioManager:
         self.portfolio_items = []
         self.reflection_data = {}
         self.current_language = "nl"  # Default to Dutch
+        
+        # Canvas LMS Integration
+        self.canvas_integration = None
+        self.canvas_config = {}
+        if CANVAS_AVAILABLE:
+            self.canvas_config = CanvasConfig.load()
+            self.setup_canvas_integration()
         
         # Language translations
         self.translations = {
@@ -236,7 +251,58 @@ class PortfolioManager:
                 "items_count": "items",
                 "with_feedback": "met feedback",
                 # Learning Outcome Tab Header
-                "learning_outcome": "Leeruitkomst"
+                "learning_outcome": "Leeruitkomst",
+                # Canvas LMS Integration
+                "canvas_integration": "Canvas LMS Integratie",
+                "canvas_settings": "Canvas Instellingen",
+                "canvas_url_label": "Canvas URL",
+                "canvas_url_hint": "bijv: https://canvas.university.edu",
+                "canvas_token_label": "Canvas Access Token",
+                "canvas_token_hint": "Je Canvas API access token",
+                "canvas_save_settings": "Instellingen Opslaan",
+                "canvas_test_connection": "Verbinding Testen",
+                "canvas_check_feedback": "Controleer Canvas Feedback",
+                "canvas_upcoming_assignments": "Aankomende Opdrachten",
+                "canvas_pending_feedback": "Wachtende Feedback",
+                "canvas_connection_success": "✅ Canvas verbinding succesvol!",
+                "canvas_connection_failed": "❌ Canvas verbinding mislukt",
+                "canvas_not_configured": "Canvas integratie niet geconfigureerd",
+                "canvas_no_pending": "✅ Alle ingeleverde opdrachten hebben feedback!",
+                "canvas_pending_found": "Gevonden {} opdracht(en) die wachten op feedback",
+                "canvas_no_upcoming": "Geen aankomende opdrachten in de komende 2 weken",
+                "canvas_upcoming_found": "Gevonden {} aankomende opdracht(en)",
+                "canvas_due_date": "Deadline:",
+                "canvas_course": "Vak:",
+                "canvas_points": "Punten:",
+                "canvas_submitted": "Ingeleverd:",
+                "canvas_view_assignment": "Bekijk Opdracht",
+                "canvas_settings_saved": "Canvas instellingen opgeslagen!",
+                "canvas_how_to_token": "Hoe krijg je een access token:",
+                "canvas_token_step1": "1. Ga naar Canvas → Account → Instellingen",
+                "canvas_token_step2": "2. Scroll naar 'Goedgekeurde Integraties'",
+                "canvas_token_step3": "3. Klik '+ Nieuwe Access Token'",
+                "canvas_token_step4": "4. Geef een naam en genereer token",
+                "menu_canvas": "Canvas LMS Integratie",
+                # Enhanced Canvas features
+                "canvas_login": "Inloggen met Canvas",
+                "canvas_login_instructions": "Canvas Login Instructies",
+                "canvas_courses": "Mijn Vakken",
+                "canvas_select_course": "Selecteer Vak",
+                "canvas_selected_course": "Geselecteerd Vak:",
+                "canvas_no_courses": "Geen vakken gevonden",
+                "canvas_assignments_dashboard": "Aankomende Opdrachten",
+                "canvas_assignment_due_in": "Over {} dagen",
+                "canvas_assignment_due_today": "Vandaag",
+                "canvas_assignment_overdue": "Te laat",
+                "canvas_no_assignments_selected": "Selecteer eerst een vak om opdrachten te zien",
+                "canvas_refresh_assignments": "Ververs Opdrachten",
+                "canvas_mark_completed": "Markeer als Voltooid",
+                "canvas_request_feedback": "Vraag Feedback",
+                "canvas_assignment_submitted": "✓ Ingeleverd",
+                "canvas_assignment_not_submitted": "Nog niet ingeleverd",
+                "canvas_feedback_requested": "Feedback aangevraagd",
+                "canvas_has_feedback": "✓ Heeft feedback",
+                "canvas_course_selection_saved": "Vak selectie opgeslagen!"
             },
             "en": {
                 "app_title": "Portfolio Document Manager - TI",
@@ -396,7 +462,58 @@ class PortfolioManager:
                 "items_count": "items",
                 "with_feedback": "met feedback",
                 # Learning Outcome Tab Header
-                "learning_outcome": "Leeruitkomst"
+                "learning_outcome": "Leeruitkomst",
+                # Canvas LMS Integration
+                "canvas_integration": "Canvas LMS Integration",
+                "canvas_settings": "Canvas Settings",
+                "canvas_url_label": "Canvas URL",
+                "canvas_url_hint": "e.g: https://canvas.university.edu",
+                "canvas_token_label": "Canvas Access Token",
+                "canvas_token_hint": "Your Canvas API access token",
+                "canvas_save_settings": "Save Settings",
+                "canvas_test_connection": "Test Connection",
+                "canvas_check_feedback": "Check Canvas Feedback",
+                "canvas_upcoming_assignments": "Upcoming Assignments",
+                "canvas_pending_feedback": "Pending Feedback",
+                "canvas_connection_success": "✅ Canvas connection successful!",
+                "canvas_connection_failed": "❌ Canvas connection failed",
+                "canvas_not_configured": "Canvas integration not configured",
+                "canvas_no_pending": "✅ All submitted assignments have feedback!",
+                "canvas_pending_found": "Found {} assignment(s) waiting for feedback",
+                "canvas_no_upcoming": "No upcoming assignments in the next 2 weeks",
+                "canvas_upcoming_found": "Found {} upcoming assignment(s)",
+                "canvas_due_date": "Due:",
+                "canvas_course": "Course:",
+                "canvas_points": "Points:",
+                "canvas_submitted": "Submitted:",
+                "canvas_view_assignment": "View Assignment",
+                "canvas_settings_saved": "Canvas settings saved!",
+                "canvas_how_to_token": "How to get an access token:",
+                "canvas_token_step1": "1. Go to Canvas → Account → Settings",
+                "canvas_token_step2": "2. Scroll to 'Approved Integrations'",
+                "canvas_token_step3": "3. Click '+ New Access Token'",
+                "canvas_token_step4": "4. Give it a name and generate token",
+                "menu_canvas": "Canvas LMS Integration",
+                # Enhanced Canvas features
+                "canvas_login": "Login with Canvas",
+                "canvas_login_instructions": "Canvas Login Instructions",
+                "canvas_courses": "My Courses",
+                "canvas_select_course": "Select Course",
+                "canvas_selected_course": "Selected Course:",
+                "canvas_no_courses": "No courses found",
+                "canvas_assignments_dashboard": "Upcoming Assignments",
+                "canvas_assignment_due_in": "Due in {} days",
+                "canvas_assignment_due_today": "Due today",
+                "canvas_assignment_overdue": "Overdue",
+                "canvas_no_assignments_selected": "Select a course first to see assignments",
+                "canvas_refresh_assignments": "Refresh Assignments",
+                "canvas_mark_completed": "Mark as Completed",
+                "canvas_request_feedback": "Request Feedback",
+                "canvas_assignment_submitted": "✓ Submitted",
+                "canvas_assignment_not_submitted": "Not submitted yet",
+                "canvas_feedback_requested": "Feedback requested",
+                "canvas_has_feedback": "✓ Has feedback",
+                "canvas_course_selection_saved": "Course selection saved!"
             }
         }
         
@@ -484,6 +601,10 @@ class PortfolioManager:
         # Initialize GUI
         self.setup_gui()
         
+        # Initialize Canvas TO DO container
+        self.canvas_todo_container = None
+        self.canvas_submission_counter = None
+        
         # Check if first time setup is needed
         if not self.student_info:
             self.first_time_setup()
@@ -504,6 +625,7 @@ class PortfolioManager:
                     ft.PopupMenuItem(),  # Separator
                     ft.PopupMenuItem(text=self.get_text("menu_student_info"), on_click=self.show_student_info_view),
                     ft.PopupMenuItem(text=self.get_text("menu_github"), on_click=self.setup_github),
+                    ft.PopupMenuItem(text=self.get_text("menu_canvas"), on_click=lambda e: self.debug_canvas_click(e)),
                     ft.PopupMenuItem(),  # Separator
                     ft.PopupMenuItem(text=self.get_text("menu_export"), on_click=self.export_data),
                     ft.PopupMenuItem(text=self.get_text("menu_import"), on_click=self.import_data),
@@ -559,71 +681,106 @@ class PortfolioManager:
 
     def show_main_view(self):
         """Show the main portfolio overview"""
+        print(f"DEBUG: show_main_view called, current_view was: {getattr(self, 'current_view', 'not set')}")
         self.current_view = "main"
         
         # Main content
         main_content = ft.Column([
-            # Student info card - centered
+            # Top row: Student info, Submission counter, and Canvas TO DO
             ft.Container(
-                content=ft.Card(
-                    content=ft.Container(
-                        content=ft.Column([
-                            ft.Text(self.get_text("student_info"), size=16, weight=ft.FontWeight.BOLD),
-                            self.info_text
-                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                        padding=20
+                content=ft.Row([
+                    # Student info card - left side
+                    ft.Container(
+                        content=ft.Card(
+                            content=ft.Container(
+                                content=ft.Column([
+                                    ft.Text(self.get_text("student_info"), size=16, weight=ft.FontWeight.BOLD),
+                                    ft.Container(height=10),  # Spacing
+                                    ft.Column([
+                                        ft.Text(f"Naam: {self.student_info.get('name', '')}", size=14),
+                                        ft.Text(f"Studentnummer: {self.student_info.get('student_number', '')}", size=14),
+                                        ft.Text(f"Semester: {self.student_info.get('semester', '')}", size=14),
+                                        ft.Text(f"Peilmoment: {self.student_info.get('milestone', '')}", size=14)
+                                    ], spacing=5) if self.student_info else ft.Text("No student info available", size=14, color=ft.Colors.GREY_600)
+                                ], horizontal_alignment=ft.CrossAxisAlignment.START),
+                                padding=20,
+                                height=250  # Same height as TO DO list
+                            ),
+                            margin=ft.margin.only(bottom=10)
+                        ),
+                        width=280  # Same width as TO DO list
                     ),
-                    margin=ft.margin.only(bottom=10)
-                ),
-                alignment=ft.alignment.center
-            ),
-            
-            # Attention card - centered
-            ft.Container(
-                content=self.attention_card,
-                margin=ft.margin.only(bottom=10, top=10),
-                alignment=ft.alignment.center
+                    
+                    # Submission counter - center
+                    ft.Container(
+                        content=self.create_submission_counter_card(),
+                        width=200,
+                        visible=bool(self.canvas_config.get('selected_course_id'))  # Show if course is selected
+                    ),
+                    
+                    # Feedback attention card - between stats and TODO
+                    ft.Container(
+                        content=self.attention_card,
+                        width=300,
+                        margin=ft.margin.only(left=15, right=15)
+                    ),
+                    
+                    # Spacer to push TO DO to the right
+                    ft.Container(
+                        expand=1
+                    ),
+                    
+                    # Canvas TO DO list - right side (narrower)
+                    ft.Container(
+                        content=self.create_canvas_todo_card(),
+                        width=280,  # Fixed width instead of expand
+                        visible=bool(self.canvas_config.get('selected_course_id'))  # Show if course is selected
+                    )
+                ], spacing=20),
+                margin=ft.margin.only(bottom=10)
             ),
             
             # Action buttons - centered
             ft.Container(
                 content=ft.Row([
-                    ft.ElevatedButton(
-                        text=self.get_text("btn_add_item"),
-                        icon=ft.Icons.ADD,
-                        on_click=self.show_add_portfolio_item_view,
-                        style=ft.ButtonStyle(
-                            bgcolor=ft.Colors.GREEN_600,
-                            color=ft.Colors.WHITE
-                        )
-                    ),
-                    ft.ElevatedButton(
-                        text=self.get_text("btn_add_feedback"),
-                        icon=ft.Icons.FEEDBACK,
-                        on_click=self.show_add_feedback_view,
-                        style=ft.ButtonStyle(
-                            bgcolor=ft.Colors.BLUE_600,
-                            color=ft.Colors.WHITE
-                        )
-                    ),
-                    ft.ElevatedButton(
-                        text=self.get_text("btn_all_feedback"),
-                        icon=ft.Icons.LIST_ALT,
-                        on_click=self.show_all_feedback_view,
-                        style=ft.ButtonStyle(
-                            bgcolor=ft.Colors.PURPLE_600,
-                            color=ft.Colors.WHITE
-                        )
-                    ),
-                    ft.ElevatedButton(
-                        text=self.get_text("btn_submit_document"),
-                        icon=ft.Icons.UPLOAD_FILE,
-                        on_click=self.show_submit_document_view,
-                        style=ft.ButtonStyle(
-                            bgcolor=ft.Colors.ORANGE_600,
-                            color=ft.Colors.WHITE
-                        )
-                    ),
+                    button for button in [
+                        ft.ElevatedButton(
+                            text=self.get_text("btn_add_item"),
+                            icon=ft.Icons.ADD,
+                            on_click=self.show_add_portfolio_item_view,
+                            style=ft.ButtonStyle(
+                                bgcolor=ft.Colors.GREEN_600,
+                                color=ft.Colors.WHITE
+                            )
+                        ),
+                        ft.ElevatedButton(
+                            text=self.get_text("btn_add_feedback"),
+                            icon=ft.Icons.FEEDBACK,
+                            on_click=self.show_add_feedback_view,
+                            style=ft.ButtonStyle(
+                                bgcolor=ft.Colors.BLUE_600,
+                                color=ft.Colors.WHITE
+                            )
+                        ),
+                        ft.ElevatedButton(
+                            text=self.get_text("btn_all_feedback"),
+                            icon=ft.Icons.LIST_ALT,
+                            on_click=self.show_all_feedback_view,
+                            style=ft.ButtonStyle(
+                                bgcolor=ft.Colors.PURPLE_600,
+                                color=ft.Colors.WHITE
+                            )
+                        ),
+                        ft.ElevatedButton(
+                            text=self.get_text("btn_submit_document"),
+                            icon=ft.Icons.UPLOAD_FILE,
+                            on_click=self.show_submit_document_view,
+                            style=ft.ButtonStyle(
+                                bgcolor=ft.Colors.ORANGE_600,
+                                color=ft.Colors.WHITE
+                            )
+                        ),
+                    ] if button is not None
                 ], spacing=10, alignment=ft.MainAxisAlignment.CENTER),
                 alignment=ft.alignment.center,
                 padding=ft.padding.symmetric(vertical=10)
@@ -661,6 +818,12 @@ class PortfolioManager:
         )
         
         self.content_container.content = centered_content
+        
+        # Update Canvas TO DO list if course is selected
+        if self.canvas_config.get('selected_course_id'):
+            self.update_canvas_todo_list()
+            self.update_canvas_submission_counter()
+        
         self.update_display()
 
     def show_back_button(self):
@@ -2159,6 +2322,655 @@ class PortfolioManager:
         dialog.open = True
         self.page.update()
 
+    # Canvas LMS Integration Methods
+    def setup_canvas_integration(self):
+        """Setup Canvas integration if configured"""
+        if CANVAS_AVAILABLE and self.canvas_config.get('canvas_url') and self.canvas_config.get('access_token'):
+            try:
+                self.canvas_integration = CanvasIntegration(
+                    self.canvas_config['canvas_url'],
+                    self.canvas_config['access_token']
+                )
+                # Test connection
+                if self.canvas_integration.test_connection():
+                    print("Canvas integration initialized successfully")
+                else:
+                    print("Canvas connection test failed")
+                    self.canvas_integration = None
+            except Exception as e:
+                print(f"Canvas integration setup failed: {e}")
+                self.canvas_integration = None
+
+    def debug_canvas_click(self, e):
+        """Debug wrapper for canvas click"""
+        print("DEBUG: Canvas menu item clicked!")
+        self.show_canvas_integration_view(e)
+
+    def show_canvas_integration_view(self, e=None):
+        """Show Canvas LMS integration view"""
+        print("DEBUG: Canvas integration view method called")
+        print(f"DEBUG: Current view: {getattr(self, 'current_view', 'not set')}")
+        print(f"DEBUG: Canvas config: {self.canvas_config}")
+        print(f"DEBUG: Canvas available: {CANVAS_AVAILABLE}")
+        
+        self.current_view = "canvas_integration"
+        
+        # Create token input field
+        self.canvas_token_field = ft.TextField(
+            label="Canvas Access Token",
+            value=self.canvas_config.get('access_token', ''),
+            password=True,
+            width=500,
+            hint_text="Enter your Canvas API token here..."
+        )
+        
+        # Create course list container
+        self.canvas_course_list = ft.Column(
+            controls=[],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            scroll=ft.ScrollMode.AUTO
+        )
+        
+        self.canvas_course_container = ft.Container(
+            content=self.canvas_course_list,
+            height=200,
+            bgcolor=ft.Colors.GREY_50,
+            border_radius=10,
+            padding=10,
+            visible=False  # Initially hidden
+        )
+        
+        # Create the Canvas integration interface
+        canvas_content = ft.Column([
+            # Back button at the top
+            ft.Container(
+                content=ft.ElevatedButton(
+                    text="← Back to Main",
+                    icon=ft.Icons.ARROW_BACK,
+                    on_click=lambda e: self.show_main_view(),
+                    style=ft.ButtonStyle(bgcolor=ft.Colors.GREY_600, color=ft.Colors.WHITE)
+                ),
+                alignment=ft.alignment.center_left,
+                margin=ft.margin.only(bottom=20)
+            ),
+            
+            # Header
+            ft.Container(
+                content=ft.Text(
+                    "� Canvas LMS Integration", 
+                    size=28, 
+                    weight=ft.FontWeight.BOLD, 
+                    color=ft.Colors.BLUE_700
+                ),
+                alignment=ft.alignment.center,
+                margin=ft.margin.only(bottom=20)
+            ),
+            
+            # Canvas URL info
+            ft.Container(
+                content=ft.Card(
+                    content=ft.Container(
+                        content=ft.Column([
+                            ft.Text("Canvas URL", size=16, weight=ft.FontWeight.BOLD),
+                            ft.Text(f"{self.canvas_config.get('canvas_url', 'Not set')}", size=14, color=ft.Colors.GREY_700),
+                        ]),
+                        padding=20
+                    )
+                ),
+                width=600,
+                alignment=ft.alignment.center,
+                margin=ft.margin.only(bottom=20)
+            ),
+            
+            # Token input section
+            ft.Container(
+                content=ft.Card(
+                    content=ft.Container(
+                        content=ft.Column([
+                            ft.Text("API Token", size=16, weight=ft.FontWeight.BOLD),
+                            ft.Text("Enter your Canvas API token to connect to your account:", size=14, color=ft.Colors.GREY_700),
+                            ft.Container(height=10),
+                            self.canvas_token_field,
+                            ft.Container(height=15),
+                            ft.Row([
+                                ft.ElevatedButton(
+                                    text="Save Token",
+                                    icon=ft.Icons.SAVE,
+                                    on_click=self.save_canvas_token,
+                                    style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE)
+                                ),
+                                ft.ElevatedButton(
+                                    text="Test Connection",
+                                    icon=ft.Icons.WIFI,
+                                    on_click=self.test_canvas_connection,
+                                    style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE_600, color=ft.Colors.WHITE)
+                                ),
+                            ], spacing=10, alignment=ft.MainAxisAlignment.CENTER)
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        padding=20
+                    )
+                ),
+                width=600,
+                alignment=ft.alignment.center,
+                margin=ft.margin.only(bottom=20)
+            ),
+            
+            # Course selection section
+            ft.Container(
+                content=ft.Card(
+                    content=ft.Container(
+                        content=ft.Column([
+                            ft.Text("Course Selection", size=16, weight=ft.FontWeight.BOLD),
+                            ft.Text("Select your course to view assignments and submissions:", size=14, color=ft.Colors.GREY_700),
+                            ft.Container(height=10),
+                            ft.Row([
+                                ft.ElevatedButton(
+                                    text="Load My Courses",
+                                    icon=ft.Icons.REFRESH,
+                                    on_click=self.load_canvas_courses,
+                                    style=ft.ButtonStyle(bgcolor=ft.Colors.PURPLE_600, color=ft.Colors.WHITE)
+                                ),
+                            ], alignment=ft.MainAxisAlignment.CENTER),
+                            ft.Container(height=15),
+                            # Course list container
+                            self.canvas_course_container
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        padding=20
+                    )
+                ),
+                width=600,
+                alignment=ft.alignment.center,
+                margin=ft.margin.only(bottom=20)
+            ),
+            
+            # Instructions section
+            ft.Container(
+                content=ft.Card(
+                    content=ft.Container(
+                        content=ft.Column([
+                            ft.Text("How to get your Canvas API Token:", size=16, weight=ft.FontWeight.BOLD),
+                            ft.Text("1. Go to https://canvas.hu.nl/", size=14),
+                            ft.Text("2. Click on 'Account' → 'Settings'", size=14),
+                            ft.Text("3. Scroll down to 'Approved Integrations'", size=14),
+                            ft.Text("4. Click '+ New Access Token'", size=14),
+                            ft.Text("5. Enter a purpose (e.g., 'Portfolio Manager')", size=14),
+                            ft.Text("6. Copy the generated token and paste it above", size=14),
+                        ]),
+                        padding=20
+                    )
+                ),
+                width=600,
+                alignment=ft.alignment.center,
+                margin=ft.margin.only(bottom=30)
+            ),
+            
+        ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER, scroll=ft.ScrollMode.AUTO)
+        
+        # Center the entire content
+        centered_content = ft.Container(
+            content=canvas_content,
+            alignment=ft.alignment.center,
+            expand=True,
+            padding=20
+        )
+        
+        print("DEBUG: Canvas content created")
+        self.content_container.content = centered_content
+        print("DEBUG: content_container updated")
+        self.page.update()
+        print("DEBUG: Canvas integration view updated successfully")
+    
+    def create_canvas_todo_card(self):
+        """Create the Canvas TO DO card for the main view"""
+        # Create the TO DO content container
+        self.canvas_todo_content = ft.Column([
+            ft.Text("Loading assignments...", size=12, color=ft.Colors.GREY_600)
+        ], scroll=ft.ScrollMode.AUTO)
+        
+        # Create the card
+        todo_card = ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("📋 Canvas TO DO", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.ORANGE_700),
+                    ft.Container(
+                        content=self.canvas_todo_content,
+                        height=250,
+                        padding=5
+                    )
+                ]),
+                padding=15
+            ),
+            margin=ft.margin.only(bottom=10)
+        )
+        
+        # Store reference to the container
+        self.canvas_todo_container = todo_card
+        
+        return todo_card
+    
+    def create_submission_counter_card(self):
+        """Create the Canvas submission counter card for the main view"""
+        # Create the submission content container
+        self.canvas_submission_content = ft.Column([
+            ft.Text("0", size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700, text_align=ft.TextAlign.CENTER),
+            ft.Text("Submissions", size=12, color=ft.Colors.GREY_600, text_align=ft.TextAlign.CENTER),
+            ft.Container(height=10),
+            ft.Text("Loading...", size=10, color=ft.Colors.GREY_500, text_align=ft.TextAlign.CENTER)
+        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+        
+        # Create the card
+        submission_card = ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("📊 Canvas Stats", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700, text_align=ft.TextAlign.CENTER),
+                    ft.Container(height=10),
+                    self.canvas_submission_content
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=15,
+                height=250  # Same height as other cards
+            ),
+            margin=ft.margin.only(bottom=10)
+        )
+        
+        # Store reference to the container
+        self.canvas_submission_counter = submission_card
+        
+        return submission_card
+    
+    def update_canvas_submission_counter(self):
+        """Update the Canvas submission counter with submitted assignments"""
+        if not self.canvas_submission_content or not CANVAS_AVAILABLE:
+            return
+        
+        selected_course_id = self.canvas_config.get('selected_course_id')
+        token = self.canvas_config.get('access_token', '')
+        
+        if not selected_course_id or not token:
+            return
+        
+        try:
+            # Get submissions from Canvas
+            canvas = CanvasIntegration(self.canvas_config['canvas_url'], token)
+            
+            # Get all assignments for the course
+            url = f"{canvas.canvas_url}/api/v1/courses/{selected_course_id}/assignments"
+            params = {'per_page': 100, 'include[]': ['submission']}
+            response = canvas.session.get(url, params=params)
+            
+            if response.status_code == 200:
+                assignments = response.json()
+                submitted_count = 0
+                needs_feedback_count = 0
+                
+                for assignment in assignments:
+                    submission = assignment.get('submission')
+                    if submission and submission.get('submitted_at'):
+                        submitted_count += 1
+                        
+                        # Check if needs feedback (no grade or comments)
+                        if not submission.get('score') and not submission.get('comment'):
+                            needs_feedback_count += 1
+                
+                # Update the display
+                self.canvas_submission_content.controls.clear()
+                self.canvas_submission_content.controls.extend([
+                    ft.Text(str(submitted_count), size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700, text_align=ft.TextAlign.CENTER),
+                    ft.Text("Submissions", size=12, color=ft.Colors.GREY_600, text_align=ft.TextAlign.CENTER),
+                    ft.Container(height=5),
+                    ft.Text(f"💬 {needs_feedback_count} need feedback", size=10, color=ft.Colors.ORANGE_600, text_align=ft.TextAlign.CENTER) if needs_feedback_count > 0 else ft.Text("✅ All have feedback", size=10, color=ft.Colors.GREEN_600, text_align=ft.TextAlign.CENTER),
+                    ft.Container(height=5),
+                    ft.Text("📈 Keep it up!", size=10, color=ft.Colors.BLUE_600, text_align=ft.TextAlign.CENTER)
+                ])
+                
+                # Update the page
+                self.page.update()
+                
+        except Exception as ex:
+            print(f"DEBUG: Error updating submission counter: {ex}")
+            self.canvas_submission_content.controls.clear()
+            self.canvas_submission_content.controls.extend([
+                ft.Text("?", size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600, text_align=ft.TextAlign.CENTER),
+                ft.Text("Error loading", size=10, color=ft.Colors.RED_600, text_align=ft.TextAlign.CENTER)
+            ])
+    
+    def update_canvas_todo_list(self):
+        """Update the Canvas TO DO list with assignments"""
+        if not self.canvas_todo_content or not CANVAS_AVAILABLE:
+            return
+        
+        selected_course_id = self.canvas_config.get('selected_course_id')
+        selected_course_name = self.canvas_config.get('selected_course_name', 'Unknown Course')
+        token = self.canvas_config.get('access_token', '')
+        
+        if not selected_course_id or not token:
+            return
+        
+        try:
+            # Get assignments from Canvas
+            canvas = CanvasIntegration(self.canvas_config['canvas_url'], token)
+            assignments = canvas.get_upcoming_assignments(selected_course_id, days_ahead=30)
+            
+            # Clear existing content
+            self.canvas_todo_content.controls.clear()
+            
+            if not assignments:
+                self.canvas_todo_content.controls.append(
+                    ft.Text("No upcoming assignments", size=12, color=ft.Colors.GREY_600)
+                )
+            else:
+                # Add course name
+                self.canvas_todo_content.controls.append(
+                    ft.Text(f"📚 {selected_course_name}", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_700)
+                )
+                
+                # Add all assignments (no limit)
+                for assignment in assignments:
+                    name = assignment.get('name', 'Unknown Assignment')
+                    due_date = assignment.get('due_date_formatted', 'No due date')
+                    
+                    assignment_item = ft.Container(
+                        content=ft.Column([
+                            ft.Text(name, size=11, weight=ft.FontWeight.BOLD),
+                            ft.Text(f"Due: {due_date}", size=10, color=ft.Colors.RED_600)
+                        ], spacing=2),
+                        padding=5,
+                        margin=2,
+                        bgcolor=ft.Colors.ORANGE_50,
+                        border_radius=5
+                    )
+                    
+                    self.canvas_todo_content.controls.append(assignment_item)
+            
+            # Update the page
+            self.page.update()
+            
+        except Exception as ex:
+            print(f"DEBUG: Error updating Canvas TO DO: {ex}")
+            self.canvas_todo_content.controls.clear()
+            self.canvas_todo_content.controls.append(
+                ft.Text("Error loading assignments", size=12, color=ft.Colors.RED_600)
+            )
+    
+    def save_canvas_token(self, e=None):
+        """Save the Canvas API token"""
+        token = self.canvas_token_field.value.strip()
+        if not token:
+            self.show_error_dialog("Error", "Please enter a Canvas API token.")
+            return
+        
+        # Update canvas config
+        self.canvas_config['access_token'] = token
+        
+        # Save to file
+        try:
+            with open('canvas_config.json', 'w') as f:
+                json.dump(self.canvas_config, f, indent=2)
+            
+            self.show_success_dialog("Success", "Canvas API token saved successfully!")
+            print(f"DEBUG: Canvas token saved")
+        except Exception as ex:
+            self.show_error_dialog("Error", f"Failed to save token: {str(ex)}")
+    
+    def test_canvas_connection(self, e=None):
+        """Test the Canvas API connection"""
+        if not CANVAS_AVAILABLE:
+            self.show_error_dialog("Error", "Canvas integration is not available.")
+            return
+        
+        token = self.canvas_token_field.value.strip()
+        if not token:
+            self.show_error_dialog("Error", "Please enter a Canvas API token first.")
+            return
+        
+        try:
+            # Test the connection using our Canvas integration
+            canvas = CanvasIntegration(self.canvas_config['canvas_url'], token)
+            user_info = canvas.get_user_info()
+            
+            if user_info:
+                self.show_success_dialog(
+                    "Connection Successful!", 
+                    f"Connected to Canvas as:\n{user_info.get('name', 'Unknown User')}\nEmail: {user_info.get('email', 'No email')}"
+                )
+                print(f"DEBUG: Canvas connection successful - {user_info}")
+                
+                # Save the token since it works
+                self.canvas_config['access_token'] = token
+                self.canvas_config['user_id'] = user_info.get('id')
+                with open('canvas_config.json', 'w') as f:
+                    json.dump(self.canvas_config, f, indent=2)
+            else:
+                self.show_error_dialog("Connection Failed", "Could not connect to Canvas. Please check your token.")
+        except Exception as ex:
+            self.show_error_dialog("Connection Error", f"Failed to connect to Canvas:\n{str(ex)}")
+            print(f"DEBUG: Canvas connection error: {ex}")
+    
+    def show_success_dialog(self, title, message):
+        """Show a success dialog"""
+        dialog = ft.AlertDialog(
+            title=ft.Text(title, color=ft.Colors.GREEN),
+            content=ft.Text(message),
+            actions=[
+                ft.TextButton("OK", on_click=lambda e: setattr(dialog, 'open', False))
+            ]
+        )
+        
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
+    
+    def load_canvas_courses(self, e=None):
+        """Load and display Canvas courses"""
+        if not CANVAS_AVAILABLE:
+            self.show_error_dialog("Error", "Canvas integration is not available.")
+            return
+        
+        token = self.canvas_config.get('access_token', '').strip()
+        if not token:
+            self.show_error_dialog("Error", "Please set up your Canvas API token first.")
+            return
+        
+        try:
+            # Create Canvas integration instance
+            canvas = CanvasIntegration(self.canvas_config['canvas_url'], token)
+            courses = canvas.get_courses()
+            
+            if not courses:
+                self.show_error_dialog("No Courses", "No courses found in your Canvas account.")
+                return
+            
+            # Clear existing course list
+            self.canvas_course_list.controls.clear()
+            
+            # Add course selection buttons
+            for course in courses:
+                course_name = course.get('name', 'Unknown Course')
+                course_code = course.get('course_code', '')
+                course_id = course.get('id')
+                
+                # Create a nice course button
+                course_button = ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.SCHOOL, color=ft.Colors.BLUE_600),
+                        ft.Column([
+                            ft.Text(course_name, size=14, weight=ft.FontWeight.BOLD),
+                            ft.Text(f"Code: {course_code}", size=12, color=ft.Colors.GREY_600) if course_code else ft.Container()
+                        ], spacing=2),
+                        ft.IconButton(
+                            icon=ft.Icons.ARROW_FORWARD,
+                            tooltip="Select this course",
+                            on_click=lambda e, cid=course_id, cname=course_name: self.select_canvas_course(cid, cname)
+                        )
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    padding=10,
+                    margin=5,
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=8,
+                    border=ft.border.all(1, ft.Colors.GREY_300),
+                    width=550
+                )
+                
+                self.canvas_course_list.controls.append(course_button)
+            
+            # Show the course container
+            self.canvas_course_container.visible = True
+            
+            # Update the page
+            self.page.update()
+            
+            print(f"DEBUG: Loaded {len(courses)} courses")
+            
+        except Exception as ex:
+            self.show_error_dialog("Error Loading Courses", f"Failed to load courses:\n{str(ex)}")
+            print(f"DEBUG: Error loading courses: {ex}")
+    
+    def select_canvas_course(self, course_id, course_name):
+        """Select a Canvas course"""
+        try:
+            # Save selected course
+            self.canvas_config['selected_course_id'] = course_id
+            self.canvas_config['selected_course_name'] = course_name
+            
+            # Save to file
+            with open('canvas_config.json', 'w') as f:
+                json.dump(self.canvas_config, f, indent=2)
+            
+            self.show_success_dialog(
+                "Course Selected!", 
+                f"Selected course:\n{course_name}\n\nYou can now view assignments and manage submissions for this course."
+            )
+            
+            # Show the TO DO container in main view and update it
+            if self.canvas_todo_container:
+                # Make the TO DO container visible in main view
+                if hasattr(self, 'main_content') and self.current_view == "main":
+                    # Find the TO DO container in the main view and make it visible
+                    for container in self.main_content.controls:
+                        if hasattr(container, 'content') and hasattr(container.content, 'controls'):
+                            for row_item in container.content.controls:
+                                if hasattr(row_item, 'content') and len(row_item.content.controls) > 1:
+                                    todo_container = row_item.content.controls[1]  # Second item is TO DO
+                                    todo_container.visible = True
+                
+                # Update the TO DO list and submission counter
+                self.update_canvas_todo_list()
+                self.update_canvas_submission_counter()
+            
+            print(f"DEBUG: Selected course {course_id}: {course_name}")
+            
+        except Exception as ex:
+            self.show_error_dialog("Error", f"Failed to select course:\n{str(ex)}")
+            print(f"DEBUG: Error selecting course: {ex}")
+    
+    def show_canvas_pending_feedback(self, pending_items):
+        """Show dialog with pending feedback items"""
+        items_list = []
+        
+        for item in pending_items[:10]:  # Show max 10 items
+            submitted_date = item['submitted_at'].strftime("%d-%m-%Y %H:%M") if item['submitted_at'] else "Unknown"
+            
+            items_list.append(
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text(f"📚 {item['course_name']}", size=12, weight=ft.FontWeight.BOLD),
+                        ft.Text(f"📝 {item['assignment_name']}", size=14),
+                        ft.Text(f"{self.get_text('canvas_submitted')} {submitted_date}", size=10, color=ft.Colors.GREY_600),
+                        ft.ElevatedButton(
+                            text=self.get_text("canvas_view_assignment"),
+                            icon=ft.Icons.OPEN_IN_NEW,
+                            on_click=lambda e, url=item['assignment_url']: webbrowser.open(url) if url else None,
+                            style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE_600, color=ft.Colors.WHITE)
+                        ) if item.get('assignment_url') else None
+                    ], spacing=5),
+                    padding=10,
+                    border=ft.border.all(1, ft.Colors.GREY_300),
+                    border_radius=5,
+                    margin=ft.margin.only(bottom=10)
+                )
+            )
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(f"{self.get_text('canvas_pending_feedback')} ({len(pending_items)})"),
+            content=ft.Container(
+                content=ft.Column(items_list, scroll=ft.ScrollMode.AUTO),
+                width=500,
+                height=400
+            ),
+            actions=[
+                ft.TextButton(self.get_text("ok_btn"), on_click=lambda e: setattr(dialog, 'open', False))
+            ]
+        )
+        
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
+    
+    def show_canvas_upcoming_assignments(self, upcoming_items):
+        """Show dialog with upcoming assignments"""
+        items_list = []
+        
+        for item in upcoming_items[:10]:  # Show max 10 items
+            due_date = item['due_at'].strftime("%d-%m-%Y %H:%M") if item['due_at'] else "No due date"
+            days_left = (item['due_at'] - datetime.datetime.now()).days if item['due_at'] else None
+            
+            # Color based on urgency
+            if days_left is not None:
+                if days_left <= 1:
+                    color = ft.Colors.RED_600
+                elif days_left <= 3:
+                    color = ft.Colors.ORANGE_600
+                else:
+                    color = ft.Colors.GREEN_600
+            else:
+                color = ft.Colors.GREY_600
+            
+            items_list.append(
+                ft.Container(
+                    content=ft.Column([
+                        ft.Text(f"📚 {item['course_name']}", size=12, weight=ft.FontWeight.BOLD),
+                        ft.Text(f"📝 {item['assignment_name']}", size=14),
+                        ft.Text(f"{self.get_text('canvas_due_date')} {due_date}", size=12, color=color),
+                        ft.Text(f"{self.get_text('canvas_points')} {item['points_possible'] or 'N/A'}", size=10, color=ft.Colors.GREY_600),
+                        ft.ElevatedButton(
+                            text=self.get_text("canvas_view_assignment"),
+                            icon=ft.Icons.OPEN_IN_NEW,
+                            on_click=lambda e, url=item['assignment_url']: webbrowser.open(url) if url else None,
+                            style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE_600, color=ft.Colors.WHITE)
+                        ) if item.get('assignment_url') else None
+                    ], spacing=5),
+                    padding=10,
+                    border=ft.border.all(1, color),
+                    border_radius=5,
+                    margin=ft.margin.only(bottom=10)
+                )
+            )
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(f"{self.get_text('canvas_upcoming_assignments')} ({len(upcoming_items)})"),
+            content=ft.Container(
+                content=ft.Column(items_list, scroll=ft.ScrollMode.AUTO),
+                width=500,
+                height=400
+            ),
+            actions=[
+                ft.TextButton(self.get_text("ok_btn"), on_click=lambda e: setattr(dialog, 'open', False))
+            ]
+        )
+        
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
+    
+    def show_snackbar(self, message):
+        """Show a snackbar message"""
+        self.page.snack_bar = ft.SnackBar(
+            content=ft.Text(message),
+            open=True
+        )
+        self.page.update()
+
     def show_learning_outcomes_info(self, e):
         """Show learning outcomes info in the main content area"""
         self.current_view = "learning_outcomes"
@@ -2366,6 +3178,7 @@ class PortfolioManager:
                         ft.PopupMenuItem(),  # Separator
                         ft.PopupMenuItem(text=self.get_text("menu_student_info"), on_click=self.show_student_info_view),
                         ft.PopupMenuItem(text=self.get_text("menu_github"), on_click=self.setup_github),
+                        ft.PopupMenuItem(text=self.get_text("menu_canvas"), on_click=self.show_canvas_integration_view),
                         ft.PopupMenuItem(),  # Separator
                         ft.PopupMenuItem(text=self.get_text("menu_export"), on_click=self.export_data),
                         ft.PopupMenuItem(text=self.get_text("menu_import"), on_click=self.import_data),
@@ -2417,6 +3230,7 @@ class PortfolioManager:
 
 def main(page: ft.Page):
     """Main entry point for the Flet application"""
+    print(f"DEBUG: Starting application with CANVAS_AVAILABLE = {CANVAS_AVAILABLE}")
     try:
         # Force window to be visible and properly configured
         page.window_visible = True

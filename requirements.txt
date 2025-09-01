@@ -3,3 +3,4 @@ markdown>=3.4.0
 weasyprint>=59.0
 xhtml2pdf>=0.2.5
 pyinstaller>=5.13.0
+requests>=2.31.0
