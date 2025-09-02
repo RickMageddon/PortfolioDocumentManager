@@ -2771,12 +2771,32 @@ class PortfolioManager:
         return count
 
     def show_error_dialog(self, title, message):
-        """Show error as inline message (simplified)"""
-        print(f"ERROR: {title} - {message}")
+        """Show error dialog to user"""
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(title, color=ft.Colors.RED),
+            content=ft.Text(message),
+            actions=[
+                ft.TextButton("OK", on_click=lambda e: self.close_dialog(dialog))
+            ]
+        )
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
 
     def show_info_dialog(self, title, message):
-        """Show info as inline message (simplified)"""
-        print(f"INFO: {title} - {message}")
+        """Show info dialog to user"""
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text(title, color=ft.Colors.BLUE),
+            content=ft.Text(message),
+            actions=[
+                ft.TextButton("OK", on_click=lambda e: self.close_dialog(dialog))
+            ]
+        )
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
 
     def setup_github(self, e):
         """Setup GitHub credentials"""
@@ -3907,14 +3927,31 @@ class PortfolioManager:
             self.github_shared_repo_container.visible = True
 
     def show_github_file_browser(self, github_field):
-        """Show GitHub file browser dialog"""
+        """Navigate to GitHub file browser screen"""
+        print("DEBUG: show_github_file_browser called")
+        
         if not self.github_integration:
+            print("DEBUG: GitHub integration not available")
             self.show_error_dialog("GitHub Not Connected", "Please configure GitHub integration first.")
             return
         
         if not (self.github_config.private_repo or self.github_config.shared_repo):
+            print("DEBUG: No repositories configured")
             self.show_error_dialog("No Repositories", "Please select your repositories in GitHub settings first.")
             return
+        
+        print(f"DEBUG: Navigating to GitHub file browser screen")
+        
+        # Store the github_field reference for later use
+        self.current_github_field = github_field
+        
+        # Navigate to GitHub file browser screen
+        self.show_github_file_browser_view()
+        
+    def show_github_file_browser_view(self):
+        """Show GitHub file browser as a full screen view"""
+        print("DEBUG: Creating GitHub file browser view")
+        self.current_view = "github_file_browser"
         
         # Create repository selection tabs
         tabs = []
@@ -3923,42 +3960,296 @@ class PortfolioManager:
             tabs.append(ft.Tab(
                 text="Private Repo",
                 icon=ft.Icons.LOCK,
-                content=self.create_github_file_tree(self.github_config.private_repo, github_field)
+                content=self.create_github_file_list(self.github_config.private_repo)
             ))
         
         if self.github_config.shared_repo:
             tabs.append(ft.Tab(
                 text="Shared Repo", 
                 icon=ft.Icons.GROUP,
-                content=self.create_github_file_tree(self.github_config.shared_repo, github_field)
+                content=self.create_github_file_list(self.github_config.shared_repo)
             ))
         
-        dialog_content = ft.Container(
+        # Create the main content
+        content = ft.Column([
+            # Header
+            ft.Container(
+                content=ft.Row([
+                    ft.IconButton(
+                        icon=ft.Icons.ARROW_BACK,
+                        tooltip="Back to Portfolio Creation",
+                        on_click=lambda e: self.show_portfolio_add_view()
+                    ),
+                    ft.Column([
+                        ft.Text("GitHub File Browser", size=24, weight=ft.FontWeight.BOLD),
+                        ft.Text("Select files from your repositories", size=16, color=ft.Colors.GREY_600),
+                    ], expand=True),
+                ]),
+                padding=ft.padding.all(20),
+                bgcolor=ft.Colors.BLUE_50,
+            ),
+            
+            # Repository tabs
+            ft.Container(
+                content=ft.Tabs(tabs=tabs),
+                expand=True,
+                padding=ft.padding.all(20)
+            )
+        ], expand=True)
+        
+        # Update the page content
+        self.page.controls.clear()
+        self.page.add(content)
+        self.page.update()
+        print("DEBUG: GitHub file browser view displayed")
+        
+    def create_github_file_list(self, repo_full_name, folder_path=None):
+        """Create a simple file list for a GitHub repository or folder"""
+        container = ft.Container(
             content=ft.Column([
-                ft.Text("Browse GitHub Files", size=18, weight=ft.FontWeight.BOLD),
-                ft.Text("Select files from your repositories to auto-fill the GitHub link", size=14, color=ft.Colors.GREY_600),
-                ft.Container(height=10),
-                ft.Container(
-                    content=ft.Tabs(tabs=tabs),
-                    height=400,
-                    width=600
-                )
+                ft.Text("Loading files...", size=14),
+                ft.ProgressRing()
             ]),
             padding=20
         )
         
-        dialog = ft.AlertDialog(
-            modal=True,
-            title=ft.Text("GitHub File Browser"),
-            content=dialog_content,
-            actions=[
-                ft.TextButton("Close", on_click=lambda e: self.close_dialog(dialog))
-            ]
-        )
+        def load_files():
+            try:
+                print(f"DEBUG: Loading files for {repo_full_name}, path: {folder_path}")
+                
+                # Get repository contents for the specified path
+                if folder_path:
+                    contents = self.github_integration.get_repository_contents(repo_full_name, folder_path)
+                else:
+                    contents = self.github_integration.get_repository_contents(repo_full_name)
+                    
+                if contents:
+                    file_controls = []
+                    
+                    # Create breadcrumb navigation
+                    breadcrumb_controls = []
+                    
+                    if folder_path:
+                        # Add root button
+                        breadcrumb_controls.append(
+                            ft.TextButton(
+                                "📁 Root", 
+                                on_click=lambda e: self.browse_github_folder_view(repo_full_name, None)
+                            )
+                        )
+                        
+                        # Split path and create breadcrumb
+                        path_parts = folder_path.split('/')
+                        current_path = ""
+                        
+                        for i, part in enumerate(path_parts):
+                            if current_path:
+                                current_path += "/"
+                            current_path += part
+                            
+                            breadcrumb_controls.append(ft.Text(" / ", size=14))
+                            
+                            if i == len(path_parts) - 1:
+                                # Current folder - not clickable
+                                breadcrumb_controls.append(
+                                    ft.Text(f"📁 {part}", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE)
+                                )
+                            else:
+                                # Parent folders - clickable
+                                breadcrumb_controls.append(
+                                    ft.TextButton(
+                                        f"📁 {part}",
+                                        on_click=lambda e, path=current_path: self.browse_github_folder_view(repo_full_name, path)
+                                    )
+                                )
+                        
+                        # Add back button to parent folder
+                        parent_path = "/".join(path_parts[:-1]) if len(path_parts) > 1 else None
+                        file_controls.append(
+                            ft.Card(
+                                content=ft.Container(
+                                    content=ft.Row([
+                                        ft.Icon(ft.Icons.ARROW_BACK, color=ft.Colors.GREY_600),
+                                        ft.Text(".. (Back to parent)", size=14, expand=True),
+                                        ft.TextButton("Go Back", 
+                                            on_click=lambda e: self.browse_github_folder_view(repo_full_name, parent_path)
+                                        )
+                                    ]),
+                                    padding=10
+                                ),
+                                color=ft.Colors.GREY_100
+                            )
+                        )
+                    else:
+                        # Root folder
+                        breadcrumb_controls.append(
+                            ft.Text(f"📁 Root of {repo_full_name}", size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE)
+                        )
+                    
+                    # Add breadcrumb navigation
+                    file_controls.insert(0, 
+                        ft.Container(
+                            content=ft.Row(breadcrumb_controls, wrap=True),
+                            padding=10,
+                            bgcolor=ft.Colors.BLUE_50,
+                            border_radius=5,
+                            margin=ft.margin.only(bottom=10)
+                        )
+                    )
+                    
+                    # Add folders first, then files
+                    folders = [item for item in contents if item.get('type') == 'dir']
+                    files = [item for item in contents if item.get('type') == 'file']
+                    
+                    for folder in folders:
+                        file_controls.append(
+                            ft.Card(
+                                content=ft.Container(
+                                    content=ft.Row([
+                                        ft.Icon(ft.Icons.FOLDER, color=ft.Colors.BLUE_600),
+                                        ft.Text(folder['name'], size=14, expand=True),
+                                        ft.TextButton("Browse →", 
+                                            on_click=lambda e, path=folder['path']: self.browse_github_folder_view(repo_full_name, path)
+                                        )
+                                    ]),
+                                    padding=10
+                                )
+                            )
+                        )
+                    
+                    for file in files:
+                        file_url = self.github_integration.get_file_url(repo_full_name, file['path'])
+                        file_controls.append(
+                            ft.Card(
+                                content=ft.Container(
+                                    content=ft.Row([
+                                        ft.Icon(ft.Icons.INSERT_DRIVE_FILE, color=ft.Colors.GREEN_600),
+                                        ft.Column([
+                                            ft.Text(file['name'], size=14, weight=ft.FontWeight.BOLD),
+                                            ft.Text(file['path'], size=12, color=ft.Colors.GREY_600)
+                                        ], expand=True),
+                                        ft.ElevatedButton("Select File", 
+                                            on_click=lambda e, url=file_url: self.select_github_file_and_return(url)
+                                        )
+                                    ]),
+                                    padding=10
+                                )
+                            )
+                        )
+                    
+                    container.content = ft.Column(file_controls, scroll=ft.ScrollMode.AUTO)
+                else:
+                    folder_display = folder_path if folder_path else "repository"
+                    container.content = ft.Text(f"No files found in {folder_display}", size=14)
+                    
+                self.page.update()
+                print(f"DEBUG: Loaded {len(files)} files and {len(folders)} folders")
+                    
+            except Exception as e:
+                print(f"DEBUG: Error loading files: {e}")
+                container.content = ft.Text(f"Error loading files: {str(e)}", size=14, color=ft.Colors.RED)
+                self.page.update()
         
-        self.page.dialog = dialog
-        dialog.open = True
+        # Load files asynchronously
+        import threading
+        threading.Thread(target=load_files, daemon=True).start()
+        
+        return container
+        
+    def browse_github_folder_view(self, repo_full_name, folder_path):
+        """Browse a specific folder and update the current view"""
+        print(f"DEBUG: Browsing folder {folder_path} in {repo_full_name}")
+        
+        # Store current browsing state
+        self.current_repo = repo_full_name
+        self.current_folder_path = folder_path
+        
+        # Find which tab we're on and update its content
+        self.update_github_folder_content(repo_full_name, folder_path)
+        
+    def update_github_folder_content(self, repo_full_name, folder_path):
+        """Update the GitHub file browser with folder content"""
+        print(f"DEBUG: Updating folder content for {folder_path}")
+        
+        # Create new file list for the folder
+        new_content = self.create_github_file_list(repo_full_name, folder_path)
+        
+        # Re-create the entire view with updated content
+        self.show_github_file_browser_view_with_path(repo_full_name, folder_path)
+        
+    def show_github_file_browser_view_with_path(self, current_repo=None, current_path=None):
+        """Show GitHub file browser view with specific path"""
+        print(f"DEBUG: Creating GitHub file browser view for path: {current_path}")
+        self.current_view = "github_file_browser"
+        
+        # Create repository selection tabs
+        tabs = []
+        
+        if self.github_config.private_repo:
+            is_current_repo = (current_repo == self.github_config.private_repo)
+            content = (self.create_github_file_list(self.github_config.private_repo, current_path) 
+                      if is_current_repo else self.create_github_file_list(self.github_config.private_repo))
+            
+            tabs.append(ft.Tab(
+                text="Private Repo",
+                icon=ft.Icons.LOCK,
+                content=content
+            ))
+        
+        if self.github_config.shared_repo:
+            is_current_repo = (current_repo == self.github_config.shared_repo)
+            content = (self.create_github_file_list(self.github_config.shared_repo, current_path) 
+                      if is_current_repo else self.create_github_file_list(self.github_config.shared_repo))
+            
+            tabs.append(ft.Tab(
+                text="Shared Repo", 
+                icon=ft.Icons.GROUP,
+                content=content
+            ))
+        
+        # Create the main content
+        content = ft.Column([
+            # Header
+            ft.Container(
+                content=ft.Row([
+                    ft.IconButton(
+                        icon=ft.Icons.ARROW_BACK,
+                        tooltip="Back to Portfolio Creation",
+                        on_click=lambda e: self.show_portfolio_add_view()
+                    ),
+                    ft.Column([
+                        ft.Text("GitHub File Browser", size=24, weight=ft.FontWeight.BOLD),
+                        ft.Text("Select files from your repositories", size=16, color=ft.Colors.GREY_600),
+                    ], expand=True),
+                ]),
+                padding=ft.padding.all(20),
+                bgcolor=ft.Colors.BLUE_50,
+            ),
+            
+            # Repository tabs
+            ft.Container(
+                content=ft.Tabs(tabs=tabs),
+                expand=True,
+                padding=ft.padding.all(20)
+            )
+        ], expand=True)
+        
+        # Update the page content
+        self.page.controls.clear()
+        self.page.add(content)
         self.page.update()
+        print("DEBUG: GitHub file browser view displayed with folder content")
+        
+    def select_github_file_and_return(self, file_url):
+        """Select a GitHub file and return to portfolio creation"""
+        print(f"DEBUG: Selected file: {file_url}")
+        
+        # Set the GitHub field value
+        if hasattr(self, 'current_github_field') and self.current_github_field:
+            self.current_github_field.value = file_url
+            
+        # Return to portfolio creation view
+        self.show_portfolio_add_view()
 
     def create_github_file_tree(self, repo_full_name, github_field):
         """Create a file tree for a GitHub repository"""
