@@ -20,6 +20,14 @@ except ImportError:
     CANVAS_AVAILABLE = False
     print("Canvas integration not available - install requests library")
 
+# GitHub Integration
+try:
+    from github_integration import GitHubIntegration, GitHubConfig
+    GITHUB_AVAILABLE = True
+except ImportError:
+    GITHUB_AVAILABLE = False
+    print("GitHub integration not available - install requests library")
+
 # Windows-specific WeasyPrint import with fallback
 WEASYPRINT_AVAILABLE = False
 XHTML2PDF_AVAILABLE = False
@@ -80,6 +88,7 @@ class PortfolioManager:
         # Data storage
         self.data_file = "portfolio_data.json"
         self.canvas_config_file = "canvas_config.json"
+        self.github_config_file = "github_config.json"
         self.student_info = {}
         self.portfolio_items = []
         self.reflection_data = {}
@@ -91,6 +100,13 @@ class PortfolioManager:
         if CANVAS_AVAILABLE:
             self.canvas_config = CanvasConfig.load()
             self.setup_canvas_integration()
+        
+        # GitHub Integration  
+        self.github_integration = None
+        self.github_config = {}
+        if GITHUB_AVAILABLE:
+            self.github_config = GitHubConfig.load()
+            self.setup_github_integration()
         
         # Language translations
         self.translations = {
@@ -303,7 +319,28 @@ class PortfolioManager:
                 "canvas_assignment_not_submitted": "Nog niet ingeleverd",
                 "canvas_feedback_requested": "Feedback aangevraagd",
                 "canvas_has_feedback": "✓ Heeft feedback",
-                "canvas_course_selection_saved": "Vak selectie opgeslagen!"
+                "canvas_course_selection_saved": "Vak selectie opgeslagen!",
+                # GitHub Integration
+                "github_integration": "GitHub Integratie",
+                "menu_github": "GitHub Integratie", 
+                "github_token_label": "GitHub Personal Access Token",
+                "github_token_placeholder": "Voer je GitHub token in...",
+                "github_save_token": "Token Opslaan",
+                "github_test_connection": "Verbinding Testen",
+                "github_select_repos": "Repositories Selecteren",
+                "github_private_repo": "Privé Repository:",
+                "github_shared_repo": "Gedeelde Repository:",
+                "github_no_repos": "Geen repositories gevonden",
+                "github_load_repos": "Repositories Laden",
+                "github_repo_selection_saved": "Repository selectie opgeslagen!",
+                "github_browse_files": "Bestanden Bladeren",
+                "github_select_files": "Bestanden Selecteren",
+                "github_file_selected": "Bestand geselecteerd",
+                "github_token_instructions": "GitHub Token Instructies:",
+                "github_token_step1": "1. Ga naar github.com/settings/tokens",
+                "github_token_step2": "2. Klik 'Generate new token (classic)'",
+                "github_token_step3": "3. Selecteer scopes: repo, read:org",
+                "github_token_step4": "4. Kopieer en plak de gegenereerde token"
             },
             "en": {
                 "app_title": "Portfolio Document Manager - TI",
@@ -514,7 +551,28 @@ class PortfolioManager:
                 "canvas_assignment_not_submitted": "Not submitted yet",
                 "canvas_feedback_requested": "Feedback requested",
                 "canvas_has_feedback": "✓ Has feedback",
-                "canvas_course_selection_saved": "Course selection saved!"
+                "canvas_course_selection_saved": "Course selection saved!",
+                # GitHub Integration
+                "github_integration": "GitHub Integration",
+                "menu_github": "GitHub Integration",
+                "github_token_label": "GitHub Personal Access Token",
+                "github_token_placeholder": "Enter your GitHub token...",
+                "github_save_token": "Save Token",
+                "github_test_connection": "Test Connection",
+                "github_select_repos": "Select Repositories",
+                "github_private_repo": "Private Repository:",
+                "github_shared_repo": "Shared Repository:",
+                "github_no_repos": "No repositories found",
+                "github_load_repos": "Load Repositories",
+                "github_repo_selection_saved": "Repository selection saved!",
+                "github_browse_files": "Browse Files",
+                "github_select_files": "Select Files",
+                "github_file_selected": "File selected",
+                "github_token_instructions": "GitHub Token Instructions:",
+                "github_token_step1": "1. Go to github.com/settings/tokens",
+                "github_token_step2": "2. Click 'Generate new token (classic)'",
+                "github_token_step3": "3. Select scopes: repo, read:org",
+                "github_token_step4": "4. Copy and paste the generated token"
             }
         }
         
@@ -1002,12 +1060,59 @@ class PortfolioManager:
             visible=existing_item.get('is_group_work', False) if existing_item else False
         )
         
-        # GitHub link
+        # GitHub link with enhanced file selection
         github_field = ft.TextField(
             label=self.get_text("github_link_label"),
             value=existing_item.get('github_link', '') if existing_item else '',
             width=600
         )
+        
+        # GitHub file selection container (initially hidden)
+        self.github_file_selection_container = ft.Container(
+            content=ft.Column([
+                ft.Text("Select files from your GitHub repositories:", size=14, weight=ft.FontWeight.BOLD),
+                ft.Text("Choose repository and browse files to auto-fill GitHub link", size=12, color=ft.Colors.GREY_600)
+            ]),
+            visible=False,
+            margin=ft.margin.only(top=10, bottom=10)
+        )
+        
+        # GitHub browse button
+        github_browse_button = ft.ElevatedButton(
+            text="Browse GitHub Files",
+            icon=ft.Icons.FOLDER_OPEN,
+            on_click=lambda e: self.show_github_file_browser(github_field),
+            style=ft.ButtonStyle(bgcolor=ft.Colors.PURPLE_600, color=ft.Colors.WHITE),
+            visible=bool(self.github_config.private_repo or self.github_config.shared_repo)
+        )
+        
+        # Canvas assignment selection
+        canvas_assignment_dropdown = ft.Dropdown(
+            label="Link to Canvas Assignment (Optional)",
+            options=[],
+            width=600,
+            visible=bool(self.canvas_integration and self.canvas_config.get('selected_course_id'))
+        )
+        
+        # Load Canvas assignments if available
+        if self.canvas_integration and self.canvas_config.get('selected_course_id'):
+            try:
+                assignments = self.canvas_integration.get_upcoming_assignments(
+                    self.canvas_config['selected_course_id'], 
+                    days_ahead=365  # Get all assignments for the year
+                )
+                canvas_assignment_dropdown.options = [
+                    ft.dropdown.Option("", "No Canvas Assignment")
+                ] + [
+                    ft.dropdown.Option(str(assignment['id']), assignment['name']) 
+                    for assignment in assignments
+                ]
+                
+                # Set existing value if editing
+                if existing_item and existing_item.get('canvas_assignment_id'):
+                    canvas_assignment_dropdown.value = str(existing_item['canvas_assignment_id'])
+            except Exception as e:
+                print(f"DEBUG: Error loading Canvas assignments: {e}")
         
         # Description
         description_field = ft.TextField(
@@ -1051,6 +1156,14 @@ class PortfolioManager:
                 "feedback": existing_item.get('feedback', []) if existing_item else []
             }
             
+            # Add Canvas assignment link if selected
+            if canvas_assignment_dropdown.value and canvas_assignment_dropdown.value != "":
+                item_data["canvas_assignment_id"] = int(canvas_assignment_dropdown.value)
+                item_data["canvas_assignment_name"] = next(
+                    (opt.text for opt in canvas_assignment_dropdown.options if opt.key == canvas_assignment_dropdown.value),
+                    "Unknown Assignment"
+                )
+            
             if assignment_type.value == "group" and group_members_field.value:
                 item_data["group_members"] = [member.strip() for member in group_members_field.value.split("\n") if member.strip()]
             
@@ -1064,6 +1177,33 @@ class PortfolioManager:
                 self.portfolio_items.append(item_data)
             
             self.save_data()
+            
+            # Auto-submit to Canvas if assignment is linked
+            if item_data.get('canvas_assignment_id') and self.canvas_integration:
+                try:
+                    # Try to submit the GitHub link to Canvas
+                    success = self.submit_to_canvas_assignment(
+                        item_data['canvas_assignment_id'],
+                        item_data['github_link'],
+                        item_data['title']
+                    )
+                    if success:
+                        self.show_success_dialog(
+                            "Portfolio Item Saved", 
+                            f"Portfolio item saved and automatically submitted to Canvas assignment:\n{item_data.get('canvas_assignment_name', 'Unknown Assignment')}"
+                        )
+                    else:
+                        self.show_success_dialog(
+                            "Portfolio Item Saved", 
+                            "Portfolio item saved, but automatic Canvas submission failed. You can manually submit the GitHub link to Canvas."
+                        )
+                except Exception as e:
+                    print(f"DEBUG: Canvas auto-submission failed: {e}")
+                    self.show_success_dialog(
+                        "Portfolio Item Saved", 
+                        "Portfolio item saved, but automatic Canvas submission failed. You can manually submit the GitHub link to Canvas."
+                    )
+            
             self.show_main_view()
         
         # Create content
@@ -1082,6 +1222,9 @@ class PortfolioManager:
                         assignment_type,
                         group_members_field,
                         github_field,
+                        github_browse_button,
+                        self.github_file_selection_container,
+                        canvas_assignment_dropdown,
                         description_field,
                         ft.Row([
                             ft.ElevatedButton(
@@ -3387,6 +3530,660 @@ class PortfolioManager:
         self.content_container.content = self.center_content(main_content)
         self.page.update()
 
+    # GitHub Integration Methods
+    def setup_github_integration(self):
+        """Setup GitHub integration if configured"""
+        if GITHUB_AVAILABLE and self.github_config.access_token:
+            try:
+                self.github_integration = GitHubIntegration(self.github_config.access_token)
+                success, message = self.github_integration.test_connection()
+                if success:
+                    print(f"GitHub integration initialized successfully: {message}")
+                    self.github_config.username = self.github_integration.username
+                    self.github_config.save()
+                else:
+                    print(f"GitHub connection test failed: {message}")
+                    self.github_integration = None
+            except Exception as e:
+                print(f"GitHub integration setup failed: {e}")
+                self.github_integration = None
+
+    def show_github_integration_view(self, e=None):
+        """Show GitHub integration configuration view"""
+        self.current_view = "github"
+        print(f"DEBUG: GitHub integration view method called")
+        print(f"DEBUG: Current view: {getattr(self, 'current_view', 'not set')}")
+        print(f"DEBUG: GitHub config: {self.github_config.__dict__}")
+        print(f"DEBUG: GitHub available: {GITHUB_AVAILABLE}")
+
+        # GitHub token input field
+        self.github_token_field = ft.TextField(
+            label=self.get_text("github_token_label"),
+            value=self.github_config.access_token,
+            password=True,
+            width=500,
+            hint_text=self.get_text("github_token_placeholder")
+        )
+
+        # Repository selection containers
+        self.github_private_repo_container = ft.Container(
+            content=ft.Text("Select private repository"),
+            visible=False
+        )
+        
+        self.github_shared_repo_container = ft.Container(
+            content=ft.Text("Select shared repository"),
+            visible=False
+        )
+
+        # Repository list container
+        self.github_repo_list = ft.Column(spacing=5)
+        self.github_repo_container = ft.Container(
+            content=self.github_repo_list,
+            visible=False
+        )
+
+        github_content = ft.Column([
+            ft.Container(
+                content=ft.Text(
+                    self.get_text("github_integration"),
+                    size=24,
+                    weight=ft.FontWeight.BOLD
+                ),
+                alignment=ft.alignment.center,
+                margin=ft.margin.only(bottom=30)
+            ),
+            
+            # Token configuration section
+            ft.Container(
+                content=ft.Card(
+                    content=ft.Container(
+                        content=ft.Column([
+                            ft.Text("GitHub Token Configuration", size=16, weight=ft.FontWeight.BOLD),
+                            ft.Text("Enter your GitHub Personal Access Token:", size=14, color=ft.Colors.GREY_700),
+                            ft.Container(height=10),
+                            self.github_token_field,
+                            ft.Container(height=15),
+                            ft.Row([
+                                ft.ElevatedButton(
+                                    text=self.get_text("github_save_token"),
+                                    icon=ft.Icons.SAVE,
+                                    on_click=self.save_github_token,
+                                    style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE)
+                                ),
+                                ft.ElevatedButton(
+                                    text=self.get_text("github_test_connection"),
+                                    icon=ft.Icons.WIFI,
+                                    on_click=self.test_github_connection,
+                                    style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE_600, color=ft.Colors.WHITE)
+                                ),
+                            ], alignment=ft.MainAxisAlignment.CENTER),
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        padding=20
+                    )
+                ),
+                width=600,
+                alignment=ft.alignment.center,
+                margin=ft.margin.only(bottom=20)
+            ),
+            
+            # Repository selection section
+            ft.Container(
+                content=ft.Card(
+                    content=ft.Container(
+                        content=ft.Column([
+                            ft.Text("Repository Selection", size=16, weight=ft.FontWeight.BOLD),
+                            ft.Text("Select your private and shared repositories:", size=14, color=ft.Colors.GREY_700),
+                            ft.Container(height=10),
+                            ft.Row([
+                                ft.ElevatedButton(
+                                    text=self.get_text("github_load_repos"),
+                                    icon=ft.Icons.REFRESH,
+                                    on_click=self.load_github_repositories,
+                                    style=ft.ButtonStyle(bgcolor=ft.Colors.PURPLE_600, color=ft.Colors.WHITE)
+                                ),
+                            ], alignment=ft.MainAxisAlignment.CENTER),
+                            ft.Container(height=15),
+                            # Repository containers
+                            self.github_private_repo_container,
+                            self.github_shared_repo_container,
+                            ft.Container(height=15),
+                            # Repository list container
+                            self.github_repo_container
+                        ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                        padding=20
+                    )
+                ),
+                width=600,
+                alignment=ft.alignment.center,
+                margin=ft.margin.only(bottom=20)
+            ),
+            
+            # Instructions section
+            ft.Container(
+                content=ft.Card(
+                    content=ft.Container(
+                        content=ft.Column([
+                            ft.Text(self.get_text("github_token_instructions"), size=16, weight=ft.FontWeight.BOLD),
+                            ft.Text(self.get_text("github_token_step1"), size=14),
+                            ft.Text(self.get_text("github_token_step2"), size=14),
+                            ft.Text(self.get_text("github_token_step3"), size=14),
+                            ft.Text(self.get_text("github_token_step4"), size=14),
+                        ]),
+                        padding=20
+                    )
+                ),
+                width=600,
+                alignment=ft.alignment.center,
+                margin=ft.margin.only(bottom=30)
+            ),
+            
+        ], spacing=0, horizontal_alignment=ft.CrossAxisAlignment.CENTER, scroll=ft.ScrollMode.AUTO)
+        
+        # Center the entire content
+        centered_content = ft.Container(
+            content=github_content,
+            alignment=ft.alignment.center,
+            expand=True,
+            padding=20
+        )
+        
+        print(f"DEBUG: GitHub content created")
+        self.content_container.content = centered_content
+        print(f"DEBUG: content_container updated")
+        self.page.update()
+        print(f"DEBUG: GitHub integration view updated successfully")
+
+    def save_github_token(self, e=None):
+        """Save the GitHub API token"""
+        token = self.github_token_field.value.strip()
+        if not token:
+            self.show_error_dialog("Error", "Please enter a GitHub access token.")
+            return
+        
+        # Update GitHub config
+        self.github_config.access_token = token
+        
+        # Save to file
+        try:
+            if self.github_config.save():
+                # Test the token
+                success, message = self.test_github_connection_silent()
+                if success:
+                    self.show_success_dialog("Success", f"GitHub token saved successfully!\n{message}")
+                    # Automatically try to load repositories for easy selection
+                    self.load_github_repositories()
+                else:
+                    self.show_error_dialog("Token Saved with Warning", f"GitHub token saved but connection test failed:\n{message}")
+                
+                print(f"DEBUG: GitHub token saved")
+            else:
+                self.show_error_dialog("Error", "Failed to save GitHub token to file.")
+        except Exception as ex:
+            self.show_error_dialog("Error", f"Failed to save token: {str(ex)}")
+
+    def test_github_connection(self, e=None):
+        """Test the GitHub API connection"""
+        if not GITHUB_AVAILABLE:
+            self.show_error_dialog("Error", "GitHub integration is not available.")
+            return
+        
+        token = self.github_token_field.value.strip()
+        if not token:
+            self.show_error_dialog("Error", "Please enter a GitHub access token first.")
+            return
+        
+        try:
+            github = GitHubIntegration(token)
+            success, message = github.test_connection()
+            
+            if success:
+                self.github_integration = github
+                self.github_config.username = github.username
+                self.show_success_dialog("Connection Test", f"✅ {message}")
+            else:
+                self.show_error_dialog("Connection Test", f"❌ {message}")
+                
+        except Exception as ex:
+            self.show_error_dialog("Connection Error", f"Failed to test connection:\n{str(ex)}")
+
+    def test_github_connection_silent(self):
+        """Test GitHub connection without showing dialogs"""
+        try:
+            github = GitHubIntegration(self.github_config.access_token)
+            success, message = github.test_connection()
+            if success:
+                self.github_integration = github
+                self.github_config.username = github.username
+            return success, message
+        except Exception as ex:
+            return False, str(ex)
+
+    def load_github_repositories(self, e=None):
+        """Load and display GitHub repositories"""
+        if not GITHUB_AVAILABLE:
+            self.show_error_dialog("Error", "GitHub integration is not available.")
+            return
+        
+        if not self.github_integration:
+            token = self.github_config.access_token or self.github_token_field.value.strip()
+            if not token:
+                self.show_error_dialog("Error", "Please set up your GitHub token first.")
+                return
+            
+            try:
+                self.github_integration = GitHubIntegration(token)
+                success, message = self.github_integration.test_connection()
+                if not success:
+                    self.show_error_dialog("Error", f"GitHub connection failed: {message}")
+                    return
+            except Exception as ex:
+                self.show_error_dialog("Error", f"Failed to create GitHub connection: {str(ex)}")
+                return
+
+        try:
+            # Get user repositories
+            repositories = self.github_integration.get_user_repositories()
+            
+            if not repositories:
+                self.show_error_dialog("No Repositories", "No repositories found in your GitHub account.")
+                return
+            
+            # Clear existing repository list
+            self.github_repo_list.controls.clear()
+            
+            # Add repository selection buttons
+            for repo in repositories:
+                repo_name = repo.get('name', 'Unknown Repository')
+                repo_full_name = repo.get('full_name', repo_name)
+                repo_private = repo.get('private', False)
+                repo_description = repo.get('description', '')
+                
+                # Create a nice repository button
+                repo_button = ft.Container(
+                    content=ft.Row([
+                        ft.Icon(
+                            ft.Icons.LOCK if repo_private else ft.Icons.PUBLIC,
+                            color=ft.Colors.ORANGE_600 if repo_private else ft.Colors.GREEN_600
+                        ),
+                        ft.Column([
+                            ft.Text(repo_name, size=14, weight=ft.FontWeight.BOLD),
+                            ft.Text(repo_full_name, size=12, color=ft.Colors.GREY_600),
+                            ft.Text(repo_description[:50] + "..." if len(repo_description) > 50 else repo_description, 
+                                   size=10, color=ft.Colors.GREY_500) if repo_description else ft.Container()
+                        ], spacing=2, expand=True),
+                        ft.Column([
+                            ft.ElevatedButton(
+                                text="Set as Private",
+                                icon=ft.Icons.PERSON,
+                                on_click=lambda e, repo_full=repo_full_name: self.select_private_repo(repo_full),
+                                style=ft.ButtonStyle(bgcolor=ft.Colors.ORANGE_600, color=ft.Colors.WHITE),
+                                tooltip="Use as private repository"
+                            ),
+                            ft.ElevatedButton(
+                                text="Set as Shared",
+                                icon=ft.Icons.GROUP,
+                                on_click=lambda e, repo_full=repo_full_name: self.select_shared_repo(repo_full),
+                                style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE_600, color=ft.Colors.WHITE),
+                                tooltip="Use as shared/team repository"
+                            )
+                        ], spacing=5)
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    padding=10,
+                    margin=5,
+                    bgcolor=ft.Colors.WHITE,
+                    border_radius=8,
+                    border=ft.border.all(1, ft.Colors.GREY_300),
+                    width=550
+                )
+                
+                self.github_repo_list.controls.append(repo_button)
+            
+            # Show the repository container
+            self.github_repo_container.visible = True
+            
+            # Update selected repositories display
+            self.update_selected_repos_display()
+            
+            # Update the page
+            self.page.update()
+            
+            print(f"DEBUG: Loaded {len(repositories)} repositories")
+            
+        except Exception as ex:
+            self.show_error_dialog("Error Loading Repositories", f"Failed to load repositories:\n{str(ex)}")
+            print(f"DEBUG: Error loading repositories: {ex}")
+
+    def select_private_repo(self, repo_full_name):
+        """Select a repository as the private repository"""
+        self.github_config.private_repo = repo_full_name
+        if self.github_config.save():
+            self.show_success_dialog("Repository Selected", f"Private repository set to:\n{repo_full_name}")
+            self.update_selected_repos_display()
+        else:
+            self.show_error_dialog("Error", "Failed to save repository selection.")
+
+    def select_shared_repo(self, repo_full_name):
+        """Select a repository as the shared repository"""
+        self.github_config.shared_repo = repo_full_name
+        if self.github_config.save():
+            self.show_success_dialog("Repository Selected", f"Shared repository set to:\n{repo_full_name}")
+            self.update_selected_repos_display()
+        else:
+            self.show_error_dialog("Error", "Failed to save repository selection.")
+
+    def update_selected_repos_display(self):
+        """Update the display of selected repositories"""
+        # Update private repo display
+        if self.github_config.private_repo:
+            self.github_private_repo_container.content = ft.Card(
+                content=ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.LOCK, color=ft.Colors.ORANGE_600),
+                        ft.Column([
+                            ft.Text("Private Repository:", size=12, weight=ft.FontWeight.BOLD),
+                            ft.Text(self.github_config.private_repo, size=14, color=ft.Colors.BLUE_700)
+                        ])
+                    ]),
+                    padding=10
+                )
+            )
+            self.github_private_repo_container.visible = True
+        
+        # Update shared repo display
+        if self.github_config.shared_repo:
+            self.github_shared_repo_container.content = ft.Card(
+                content=ft.Container(
+                    content=ft.Row([
+                        ft.Icon(ft.Icons.GROUP, color=ft.Colors.BLUE_600),
+                        ft.Column([
+                            ft.Text("Shared Repository:", size=12, weight=ft.FontWeight.BOLD),
+                            ft.Text(self.github_config.shared_repo, size=14, color=ft.Colors.BLUE_700)
+                        ])
+                    ]),
+                    padding=10
+                )
+            )
+            self.github_shared_repo_container.visible = True
+
+    def show_github_file_browser(self, github_field):
+        """Show GitHub file browser dialog"""
+        if not self.github_integration:
+            self.show_error_dialog("GitHub Not Connected", "Please configure GitHub integration first.")
+            return
+        
+        if not (self.github_config.private_repo or self.github_config.shared_repo):
+            self.show_error_dialog("No Repositories", "Please select your repositories in GitHub settings first.")
+            return
+        
+        # Create repository selection tabs
+        tabs = []
+        
+        if self.github_config.private_repo:
+            tabs.append(ft.Tab(
+                text="Private Repo",
+                icon=ft.Icons.LOCK,
+                content=self.create_github_file_tree(self.github_config.private_repo, github_field)
+            ))
+        
+        if self.github_config.shared_repo:
+            tabs.append(ft.Tab(
+                text="Shared Repo", 
+                icon=ft.Icons.GROUP,
+                content=self.create_github_file_tree(self.github_config.shared_repo, github_field)
+            ))
+        
+        dialog_content = ft.Container(
+            content=ft.Column([
+                ft.Text("Browse GitHub Files", size=18, weight=ft.FontWeight.BOLD),
+                ft.Text("Select files from your repositories to auto-fill the GitHub link", size=14, color=ft.Colors.GREY_600),
+                ft.Container(height=10),
+                ft.Container(
+                    content=ft.Tabs(tabs=tabs),
+                    height=400,
+                    width=600
+                )
+            ]),
+            padding=20
+        )
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("GitHub File Browser"),
+            content=dialog_content,
+            actions=[
+                ft.TextButton("Close", on_click=lambda e: self.close_dialog(dialog))
+            ]
+        )
+        
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
+
+    def create_github_file_tree(self, repo_full_name, github_field):
+        """Create a file tree for a GitHub repository"""
+        file_tree_container = ft.Container(
+            content=ft.Text("Loading files...", size=14),
+            padding=10
+        )
+        
+        def load_files():
+            try:
+                contents = self.github_integration.get_repository_contents(repo_full_name)
+                if contents:
+                    file_controls = []
+                    
+                    # Add folders first, then files
+                    folders = [item for item in contents if item.get('type') == 'dir']
+                    files = [item for item in contents if item.get('type') == 'file']
+                    
+                    for folder in folders:
+                        file_controls.append(
+                            ft.Container(
+                                content=ft.Row([
+                                    ft.Icon(ft.Icons.FOLDER, color=ft.Colors.BLUE_600),
+                                    ft.Text(folder['name'], size=14),
+                                    ft.IconButton(
+                                        icon=ft.Icons.ARROW_FORWARD,
+                                        tooltip="Browse folder",
+                                        on_click=lambda e, path=folder['path']: self.browse_github_folder(repo_full_name, path, github_field)
+                                    )
+                                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                                padding=5,
+                                border_radius=4,
+                                bgcolor=ft.Colors.GREY_100
+                            )
+                        )
+                    
+                    for file in files:
+                        file_url = self.github_integration.get_file_url(repo_full_name, file['path'])
+                        file_controls.append(
+                            ft.Container(
+                                content=ft.Row([
+                                    ft.Icon(ft.Icons.INSERT_DRIVE_FILE, color=ft.Colors.GREEN_600),
+                                    ft.Column([
+                                        ft.Text(file['name'], size=14),
+                                        ft.Text(file['path'], size=10, color=ft.Colors.GREY_600)
+                                    ], spacing=2, expand=True),
+                                    ft.ElevatedButton(
+                                        text="Select",
+                                        icon=ft.Icons.CHECK,
+                                        on_click=lambda e, url=file_url: self.select_github_file(url, github_field),
+                                        style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE)
+                                    )
+                                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                                padding=5,
+                                border_radius=4
+                            )
+                        )
+                    
+                    file_tree_container.content = ft.Column(
+                        controls=file_controls,
+                        scroll=ft.ScrollMode.AUTO,
+                        spacing=2
+                    )
+                else:
+                    file_tree_container.content = ft.Text("No files found in repository", size=14, color=ft.Colors.GREY_600)
+                    
+            except Exception as ex:
+                file_tree_container.content = ft.Text(f"Error loading files: {str(ex)}", size=14, color=ft.Colors.RED)
+            
+            self.page.update()
+        
+        # Load files asynchronously
+        load_files()
+        
+        return file_tree_container
+
+    def browse_github_folder(self, repo_full_name, folder_path, github_field):
+        """Browse a specific folder in GitHub repository"""
+        try:
+            contents = self.github_integration.get_repository_contents(repo_full_name, folder_path)
+            
+            # Create breadcrumb navigation
+            path_parts = folder_path.split('/')
+            breadcrumb_controls = [
+                ft.TextButton("📁 Root", on_click=lambda e: self.show_github_file_browser(github_field))
+            ]
+            
+            current_path = ""
+            for part in path_parts:
+                if part:
+                    current_path += f"/{part}" if current_path else part
+                    breadcrumb_controls.append(
+                        ft.Text(" > ", size=12, color=ft.Colors.GREY_600)
+                    )
+                    breadcrumb_controls.append(
+                        ft.TextButton(
+                            part,
+                            on_click=lambda e, path=current_path: self.browse_github_folder(repo_full_name, path, github_field)
+                        )
+                    )
+            
+            file_controls = [
+                ft.Container(
+                    content=ft.Row(breadcrumb_controls, scroll=ft.ScrollMode.AUTO),
+                    margin=ft.margin.only(bottom=10)
+                )
+            ]
+            
+            if contents:
+                # Add folders first, then files
+                folders = [item for item in contents if item.get('type') == 'dir']
+                files = [item for item in contents if item.get('type') == 'file']
+                
+                for folder in folders:
+                    file_controls.append(
+                        ft.Container(
+                            content=ft.Row([
+                                ft.Icon(ft.Icons.FOLDER, color=ft.Colors.BLUE_600),
+                                ft.Text(folder['name'], size=14),
+                                ft.IconButton(
+                                    icon=ft.Icons.ARROW_FORWARD,
+                                    tooltip="Browse folder",
+                                    on_click=lambda e, path=folder['path']: self.browse_github_folder(repo_full_name, path, github_field)
+                                )
+                            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                            padding=5,
+                            border_radius=4,
+                            bgcolor=ft.Colors.GREY_100
+                        )
+                    )
+                
+                for file in files:
+                    file_url = self.github_integration.get_file_url(repo_full_name, file['path'])
+                    file_controls.append(
+                        ft.Container(
+                            content=ft.Row([
+                                ft.Icon(ft.Icons.INSERT_DRIVE_FILE, color=ft.Colors.GREEN_600),
+                                ft.Column([
+                                    ft.Text(file['name'], size=14),
+                                    ft.Text(file['path'], size=10, color=ft.Colors.GREY_600)
+                                ], spacing=2, expand=True),
+                                ft.ElevatedButton(
+                                    text="Select",
+                                    icon=ft.Icons.CHECK,
+                                    on_click=lambda e, url=file_url: self.select_github_file(url, github_field),
+                                    style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE)
+                                )
+                            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                            padding=5,
+                            border_radius=4
+                        )
+                    )
+            else:
+                file_controls.append(ft.Text("No files found in this folder", size=14, color=ft.Colors.GREY_600))
+            
+            # Update the dialog with folder contents
+            updated_content = ft.Container(
+                content=ft.Column([
+                    ft.Text(f"Browse: {repo_full_name}/{folder_path}", size=18, weight=ft.FontWeight.BOLD),
+                    ft.Text("Select files from your repository to auto-fill the GitHub link", size=14, color=ft.Colors.GREY_600),
+                    ft.Container(height=10),
+                    ft.Container(
+                        content=ft.Column(
+                            controls=file_controls,
+                            scroll=ft.ScrollMode.AUTO,
+                            spacing=2
+                        ),
+                        height=400,
+                        width=600
+                    )
+                ]),
+                padding=20
+            )
+            
+            # Update existing dialog
+            if hasattr(self, 'page') and self.page.dialog:
+                self.page.dialog.content = updated_content
+                self.page.update()
+                
+        except Exception as ex:
+            self.show_error_dialog("Error", f"Failed to browse folder: {str(ex)}")
+
+    def select_github_file(self, file_url, github_field):
+        """Select a GitHub file and update the GitHub field"""
+        github_field.value = file_url
+        
+        # Close the dialog
+        if hasattr(self, 'page') and self.page.dialog:
+            self.page.dialog.open = False
+        
+        self.page.update()
+        
+        # Show success message
+        self.show_success_dialog("File Selected", f"GitHub link updated:\n{file_url}")
+
+    def submit_to_canvas_assignment(self, assignment_id, github_url, portfolio_title):
+        """Submit GitHub link to Canvas assignment"""
+        try:
+            if not self.canvas_integration:
+                return False
+            
+            # Create submission text with GitHub link and portfolio info
+            submission_text = f"""
+Portfolio Submission: {portfolio_title}
+
+GitHub Link: {github_url}
+
+This submission was automatically created by the Portfolio Document Manager.
+"""
+            
+            # Use Canvas API to submit assignment (this would need to be implemented in canvas_integration.py)
+            # For now, we'll just log the submission
+            print(f"DEBUG: Auto-submitting to Canvas Assignment {assignment_id}:")
+            print(f"  Portfolio: {portfolio_title}")
+            print(f"  GitHub URL: {github_url}")
+            
+            # Note: Full Canvas submission would require implementing the submission API in canvas_integration.py
+            # This is a placeholder that shows the concept
+            
+            return True
+            
+        except Exception as e:
+            print(f"ERROR: Canvas submission failed: {e}")
+            return False
+
     def show_about(self, e=None):
         """Show about information"""
         self.current_view = "about"
@@ -3530,7 +4327,7 @@ class PortfolioManager:
                         ft.PopupMenuItem(text=self.get_text("menu_feedback"), on_click=self.show_feedback_info),
                         ft.PopupMenuItem(),  # Separator
                         ft.PopupMenuItem(text=self.get_text("menu_student_info"), on_click=self.show_student_info_view),
-                        ft.PopupMenuItem(text=self.get_text("menu_github"), on_click=self.setup_github),
+                        ft.PopupMenuItem(text=self.get_text("menu_github"), on_click=self.show_github_integration_view),
                         ft.PopupMenuItem(text=self.get_text("menu_canvas"), on_click=self.show_canvas_integration_view),
                         ft.PopupMenuItem(),  # Separator
                         ft.PopupMenuItem(text=self.get_text("menu_export"), on_click=self.export_data),

@@ -20,6 +20,7 @@ temp_verantwoordingsdocument_*.md
 
 # Portfolio data (user-specific)
 portfolio_data.json
+canvas_config.json
 
 # Build and release files
 build/
@@ -60,3 +61,4 @@ install.sh
 uninstall.sh
 release.py
 check_deps.py
+
