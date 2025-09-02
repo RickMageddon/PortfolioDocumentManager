@@ -79,6 +79,7 @@ class PortfolioManager:
         
         # Data storage
         self.data_file = "portfolio_data.json"
+        self.canvas_config_file = "canvas_config.json"
         self.student_info = {}
         self.portfolio_items = []
         self.reflection_data = {}
@@ -598,6 +599,9 @@ class PortfolioManager:
         # Load existing data
         self.load_data()
         
+        # Flag to track automatic setup flow
+        self.in_automatic_setup = False
+        
         # Initialize GUI
         self.setup_gui()
         
@@ -607,7 +611,15 @@ class PortfolioManager:
         
         # Check if first time setup is needed
         if not self.student_info:
-            self.first_time_setup()
+            # First time setup - student info (use the actual view, not dialog)
+            self.in_automatic_setup = True
+            self.show_student_info_view()
+        elif not os.path.exists(self.canvas_config_file):
+            # Student info exists but Canvas not configured
+            self.show_canvas_setup_prompt()
+        else:
+            # Everything is configured, show main view
+            self.show_main_view()
 
     def setup_gui(self):
         """Setup the main GUI interface"""
@@ -672,12 +684,16 @@ class PortfolioManager:
         # Add to page
         self.page.add(self.content_container)
         
-        # Show initial view
-        self.show_main_view()
-        
         # Check if first time setup is needed
         if not self.student_info:
-            self.show_student_info_view()
+            # First time setup - student info
+            self.first_time_setup()
+        elif not os.path.exists(self.canvas_config_file):
+            # Student info exists but Canvas not configured
+            self.show_canvas_setup_prompt()
+        else:
+            # Everything is configured, show main view
+            self.show_main_view()
 
     def show_main_view(self):
         """Show the main portfolio overview"""
@@ -898,7 +914,15 @@ class PortfolioManager:
                 "milestone": milestone_dropdown.value
             }
             self.save_data()
-            self.show_main_view()
+            
+            # Check if we're in automatic setup and Canvas config is needed
+            if self.in_automatic_setup and not os.path.exists(self.canvas_config_file):
+                # Continue automatic setup flow to Canvas configuration
+                self.show_canvas_integration_view()
+            else:
+                # Normal flow or Canvas already configured
+                self.in_automatic_setup = False
+                self.show_main_view()
         
         error_text = ft.Text("", color=ft.Colors.RED, visible=False)
         
@@ -1736,7 +1760,13 @@ class PortfolioManager:
             self.save_data()
             self.update_display()
             self.close_dialog(dialog)
-            self.page.update()
+            
+            # Check if Canvas configuration is needed
+            if not os.path.exists(self.canvas_config_file):
+                self.show_canvas_setup_after_student_info()
+            else:
+                self.show_main_view()
+                self.page.update()
         
         dialog = ft.AlertDialog(
             modal=True,
@@ -1757,6 +1787,93 @@ class PortfolioManager:
             actions=[
                 ft.TextButton("Annuleren", on_click=lambda e: setattr(dialog, 'open', False)),
                 ft.ElevatedButton("OK", on_click=save_and_close)
+            ]
+        )
+        
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
+
+    def show_canvas_setup_after_student_info(self):
+        """Show Canvas setup dialog after student info is configured"""
+        def proceed_to_canvas(e):
+            self.close_dialog(dialog)
+            self.show_canvas_integration_view()
+        
+        def skip_canvas(e):
+            self.close_dialog(dialog)
+            self.show_main_view()
+            self.page.update()
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Canvas LMS Configuratie"),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("Canvas LMS Integratie Instellen", 
+                           size=18, weight=ft.FontWeight.BOLD),
+                    ft.Text("Voor de volledige functionaliteit van de Portfolio Manager " +
+                           "moet je Canvas LMS configureren.", size=14),
+                    ft.Text("", size=8),  # spacer
+                    ft.Text("• Toegang tot je Canvas opdrachten", size=12),
+                    ft.Text("• Automatische feedback tracking", size=12),
+                    ft.Text("• GitHub link integratie", size=12),
+                    ft.Text("• Overzicht van inleveringen", size=12),
+                    ft.Text("", size=8),  # spacer
+                    ft.Text("Wil je Canvas nu configureren?", size=14, weight=ft.FontWeight.BOLD),
+                ], spacing=10),
+                width=450,
+                height=300
+            ),
+            actions=[
+                ft.TextButton("Later", on_click=skip_canvas),
+                ft.ElevatedButton("Canvas Configureren", on_click=proceed_to_canvas, 
+                                style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE_600, color=ft.Colors.WHITE))
+            ]
+        )
+        
+        self.page.dialog = dialog
+        dialog.open = True
+        self.page.update()
+
+    def show_canvas_setup_prompt(self):
+        """Show Canvas setup prompt when Canvas is not configured"""
+        def proceed_to_canvas(e):
+            # Set automatic setup flag when coming from initial setup
+            self.in_automatic_setup = True
+            self.close_dialog(dialog)
+            self.show_canvas_integration_view()
+        
+        def skip_canvas(e):
+            self.in_automatic_setup = False
+            self.close_dialog(dialog)
+            self.show_main_view()
+        
+        dialog = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("Canvas LMS Configuratie Vereist"),
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("Canvas LMS is nog niet geconfigureerd", 
+                           size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.ORANGE_700),
+                    ft.Text("Voor optimale functionaliteit van de Portfolio Manager " +
+                           "wordt Canvas LMS configuratie aanbevolen.", size=14),
+                    ft.Text("", size=8),  # spacer
+                    ft.Text("Met Canvas configuratie krijg je:", size=14, weight=ft.FontWeight.BOLD),
+                    ft.Text("• Automatisch overzicht van opdrachten", size=12),
+                    ft.Text("• Real-time feedback status", size=12),  
+                    ft.Text("• GitHub link integratie", size=12),
+                    ft.Text("• Submission tracking", size=12),
+                    ft.Text("", size=8),  # spacer
+                    ft.Text("Configureer Canvas nu of sla over om later in te stellen.", size=12),
+                ], spacing=10),
+                width=500,
+                height=320
+            ),
+            actions=[
+                ft.TextButton("Later Instellen", on_click=skip_canvas),
+                ft.ElevatedButton("Canvas Configureren", on_click=proceed_to_canvas, 
+                                style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE_600, color=ft.Colors.WHITE))
             ]
         )
         
@@ -2059,44 +2176,87 @@ class PortfolioManager:
             self.show_error_dialog("Fout", f"Document generatie mislukt: {str(e)}")
 
     def generate_markdown_document(self):
-        """Generate the complete markdown document (restored to main.py style)"""
+        """Generate the complete markdown document with proper compact format"""
         content = []
-        # Header
-        content.append("![logo](https://www.hu.nl/-/media/hu/afbeeldingen/algemeen/hu-logo.ashx) [](logo-id)\n")
-        content.append("# Verantwoordingsdocument[](title-id) <!-- omit in toc -->\n")
+        
+        # Header with markdown link check disable comment
+        content.append("<!-- markdown-link-check-disable -->")
+        content.append("![logo](https://www.hu.nl/-/media/hu/afbeeldingen/algemeen/hu-logo.ashx) [](logo-id)")
+        content.append("")
+        content.append("# Verantwoordingsdocument[](title-id) <!-- omit in toc -->")
+        content.append("")
+        
+        # Table of Contents
         semester = self.student_info.get('semester', '4')
-        content.append("### Inhoud[](toc-id)\n")
+        content.append("### Inhoud[](toc-id)")
+        content.append("")
         content.append(f"- [Portfolio Technische Informatica (TI) semester {semester} (S{semester})](#portfolio-technische-informatica-ti-semester-{semester}-s{semester})")
+        content.append("  - [Deel 1 Algemeen.](#deel-1-algemeen)")
+        content.append("  - [Deel 2 Leeruitkomsten.](#deel-2-leeruitkomsten)")
         content.append("- [Algemeen](#algemeen)")
         content.append("- [Leeruitkomsten](#leeruitkomsten)")
-        for i in range(1, 10):
-            content.append(f"  - [Leeruitkomst {i} {self.learning_outcomes[i]['title']}](#leeruitkomst-{i}-{self.learning_outcomes[i]['title'].lower()})")
+        content.append("  - [Leeruitkomst 1 Analyseren](#leeruitkomst-1-analyseren)")
+        content.append("  - [Leeruitkomst 2 Ontwerpen](#leeruitkomst-2-ontwerpen)")
+        content.append("  - [Leeruitkomst 3 Adviseren](#leeruitkomst-3-adviseren)")
+        content.append("  - [Leeruitkomst 4 Realiseren](#leeruitkomst-4-realiseren)")
+        content.append("  - [Leeruitkomst 5 Beheren](#leeruitkomst-5-beheren)")
+        content.append("  - [Leeruitkomst 6 Toekomstgericht organiseren](#leeruitkomst-6-toekomstgericht-organiseren)")
+        content.append("  - [Leeruitkomst 7 Doelgericht interacteren](#leeruitkomst-7-doelgericht-interacteren)")
+        content.append("  - [Leeruitkomst 8 Persoonlijk leiderschap](#leeruitkomst-8-persoonlijk-leiderschap)")
+        content.append("  - [Leeruitkomst 9 Onderzoek probleem oplossen](#leeruitkomst-9-onderzoek-probleem-oplossen)")
         content.append("")
-        content.append("---\n")
-        content.append("**v1.0.5 [](version-id)** Gegenereerd door Portfolio Document Manager[](author-id).\n")
-        content.append("---\n")
+        content.append("---")
+        content.append("")
+        
+        # Version and author info - v0.1.0 for initial document, v1.0.5 when portfolio items exist
+        if len(self.portfolio_items) == 0:
+            content.append("**v0.1.0 [](version-id)** Start document voor verantwoordingsdocument door HU IICT[](author-id).")
+        else:
+            content.append("**v1.0.5 [](version-id)** Gegenereerd door Portfolio Document Manager[](author-id).")
+        
+        content.append("")
+        content.append("---")
+        content.append("")
+        
+        # Portfolio header
         semester = self.student_info.get('semester', '4')
-        content.append(f"<h2 class='portfolio-header'>Portfolio Technische Informatica (TI) semester {semester} (S{semester})</h2>\n")
+        content.append(f"# Portfolio Technische Informatica (TI) semester {semester} (S{semester})")
+        content.append("")
+        content.append("## Deel 1 Algemeen.")
+        content.append("")
         content.append("Onderwerp | Graag invullen | Opmerking")
         content.append("--- | --- | ---")
         content.append(f"*Peilmoment* | `peilmoment {self.student_info.get('milestone', '')}` | ")
         content.append(f"*Naam student* | `{self.student_info.get('name', '')}` | ")
         content.append(f"*Studentnummer* | `{self.student_info.get('student_number', '')}` | ")
         content.append(f"*Semester* | `semester {semester}` | ")
-        content.append(f"*Datum* | `{datetime.datetime.now().strftime('%d-%m-%Y')}` | dd-mm-jjjj\n")
-        content.append("## Algemeen\n")
-        content.append(f"*Waar ik het meest trots op ben:*\n")
-        content.append(f"    {self.reflection_data.get('proud_of', '--')}\n")
-        content.append(f"*Waar ik de afgelopen periode moeite mee heb gehad en welke actie ik heb ondernomen:*\n")
-        content.append(f"    {self.reflection_data.get('struggled_with', '--')}\n")
-        content.append(f"*Wat ik nog graag wil leren en welke actie ik wil gaan ondernemen:*\n")
-        content.append(f"    {self.reflection_data.get('want_to_learn', '--')}\n")
-        content.append("---\n")
-        content.append("## Leeruitkomsten\n")
+        content.append(f"*Datum* | `{datetime.datetime.now().strftime('%d-%m-%Y')}` | dd-mm-jjjj")
+        content.append("")
+        content.append("## Algemeen")
+        content.append("")
+        content.append("*Waar ik het meest trots op ben:*")
+        content.append("")
+        content.append(f"    {self.reflection_data.get('proud_of', '--')}")
+        content.append("")
+        content.append("*Waar ik de afgelopen periode moeite mee heb gehad en welke actie ik heb ondernomen:*")
+        content.append("")
+        content.append(f"    {self.reflection_data.get('struggled_with', '--')}")
+        content.append("")
+        content.append("*Wat ik nog graag wil leren en welke actie ik wil gaan ondernemen:*")
+        content.append("")
+        content.append(f"    {self.reflection_data.get('want_to_learn', '--')}")
+        content.append("")
+        content.append("---")
+        content.append("")
+        content.append("## Deel 2 Leeruitkomsten.")
+        content.append("")
+        content.append("## Leeruitkomsten")
+        content.append("")
         for lo_num in range(1, 10):
             lo = self.learning_outcomes[lo_num]
-            content.append(f"### Leeruitkomst {lo_num} {lo['title']}\n")
-            content.append(f"*{lo['description']}*\n")
+            content.append(f"### Leeruitkomst {lo_num} {lo['title']}")
+            content.append("")
+            content.append(f"*{lo['description']}*")
             content.append("")
             content.append("**Indicatoren:**")
             content.append("")
@@ -2105,14 +2265,16 @@ class PortfolioManager:
                 content.append(f"<li>{indicator}</li>")
             content.append("</ul>")
             content.append("")
-            content.append("---\n")
+            content.append("---")
+            content.append("")
             personal_items = [item for item in self.portfolio_items 
                             if lo_num in item.get('learning_outcomes', []) and not item.get('is_group_work', False)]
             group_items = [item for item in self.portfolio_items 
                          if lo_num in item.get('learning_outcomes', []) and item.get('is_group_work', False)]
             if personal_items or group_items:
                 if personal_items:
-                    content.append(f"**Leeruitkomst {lo_num} Persoonlijke opdrachten:**\n")
+                    content.append(f"**Leeruitkomst {lo_num} Persoonlijke opdrachten:**")
+                    content.append("")
                     content.append("| Portfolio-item     | Beschrijving                                           | Bewijslast               |")
                     content.append("|--------------------|--------------------------------------------------------|--------------------------|")
                     for item in personal_items:
@@ -2132,7 +2294,8 @@ class PortfolioManager:
                             content.append('</div>')
                             content.append("")
                 if group_items:
-                    content.append(f"**Leeruitkomst {lo_num} Groepsopdrachten:**\n")
+                    content.append(f"**Leeruitkomst {lo_num} Groepsopdrachten:**")
+                    content.append("")
                     content.append("| Portfolio-item     | Beschrijving                                           | Bewijslast               |")
                     content.append("|--------------------|--------------------------------------------------------|--------------------------|")
                     for item in group_items:
@@ -2152,53 +2315,227 @@ class PortfolioManager:
                             content.append('</div>')
                             content.append("")
             else:
-                content.append("<div class='no-portfolio-item'>Student heeft nog geen portfolio item ingeleverd voor deze leeruitkomst.</div>\n")
-            content.append("---\n")
+                content.append("<div class='no-portfolio-item'>Student heeft nog geen portfolio item ingeleverd voor deze leeruitkomst.</div>")
+                content.append("")
         return "\n".join(content)
 
+    def ensure_logo_available(self):
+        """Download and cache HU logo locally for PDF generation"""
+        logo_path = os.path.join(os.path.dirname(__file__), 'hu_logo.png')
+        
+        # Check if logo already exists
+        if os.path.exists(logo_path):
+            return logo_path
+        
+        try:
+            print("Downloading HU logo for PDF generation...")
+            import requests
+            
+            logo_url = 'https://www.hu.nl/-/media/hu/afbeeldingen/algemeen/hu-logo.ashx'
+            response = requests.get(logo_url, timeout=10)
+            response.raise_for_status()
+            
+            with open(logo_path, 'wb') as f:
+                f.write(response.content)
+            
+            print(f"HU logo downloaded successfully to: {logo_path}")
+            return logo_path
+            
+        except Exception as e:
+            print(f"Failed to download HU logo: {e}")
+            print("PDF will be generated without logo")
+            return None
+
     def generate_pdf(self, markdown_filename):
-        """Generate PDF from markdown using weasyprint or xhtml2pdf fallback"""
+        """Generate PDF directly from markdown file using pandoc or markdown2pdf"""
         if not WEASYPRINT_AVAILABLE and not XHTML2PDF_AVAILABLE:
             print("No PDF libraries available. PDF generation skipped.")
             print("Only Markdown file was generated.")
             return False
-            
-        with open(markdown_filename, 'r', encoding='utf-8') as f:
-            markdown_content = f.read()
-        html_content = markdown.markdown(markdown_content, extensions=['tables'])
-        html_with_css = f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset=\"UTF-8\">
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }}
-                h1, h2, h3 {{ color: #333; }}
-                h2.portfolio-header {{ font-size: 1.3em; }}
-                table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
-                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
-                th {{ background-color: #f2f2f2; }}
-                code {{ background-color: #f4f4f4; padding: 2px 4px; border-radius: 3px; }}
-                pre {{ background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }}
-                .no-portfolio-item {{ color: red; font-weight: bold; }}
-                h3 + p em {{ font-style: italic; font-size: 0.9em; color: #666; }}
-                p strong:contains(\"Indicatoren:\") {{ font-weight: bold; }}
-                .indicators-list {{ font-style: normal; font-size: 1em; color: #333; margin-top: 0.5em; }}
-                .indicators-list li {{ margin: 0.2em 0; }}
-                .feedback-section {{ margin: 10px 0; }}
-                .feedback-item {{ margin-bottom: 15px; padding: 10px; background-color: #f9f9f9; border-left: 3px solid #ddd; }}
-                .feedback-item strong {{ color: #555; }}
-                .feedback-item p {{ margin: 5px 0 0 0; line-height: 1.4; }}
-            </style>
-        </head>
-        <body>
-        {html_content}
-        </body>
-        </html>
-        """
+        
+        # Download HU logo locally for PDF generation
+        logo_path = self.ensure_logo_available()
+        
+        # Try to use pandoc first (if available)
+        pdf_filename = markdown_filename.replace('.md', '.pdf')
         
         try:
-            pdf_filename = markdown_filename.replace('.md', '.pdf')
+            # Try pandoc first (best markdown to PDF conversion)
+            import subprocess
+            result = subprocess.run([
+                'pandoc', 
+                markdown_filename, 
+                '-o', pdf_filename,
+                '--pdf-engine=wkhtmltopdf',
+                '--css=style.css'
+            ], capture_output=True, text=True)
+            
+            if result.returncode == 0:
+                print("Successfully generated PDF using pandoc")
+                return True
+            else:
+                print(f"Pandoc failed: {result.stderr}")
+        except FileNotFoundError:
+            print("Pandoc not found, falling back to HTML conversion...")
+        except Exception as e:
+            print(f"Pandoc error: {e}")
+        
+        # Fallback to improved HTML conversion with local logo
+        try:
+            with open(markdown_filename, 'r', encoding='utf-8') as f:
+                markdown_content = f.read()
+            
+            # Replace remote logo URL with local path
+            if logo_path:
+                markdown_content = markdown_content.replace(
+                    'https://www.hu.nl/-/media/hu/afbeeldingen/algemeen/hu-logo.ashx',
+                    f'file:///{logo_path.replace(chr(92), "/")}'
+                )
+            
+            html_content = markdown.markdown(markdown_content, extensions=['tables', 'toc'])
+            
+            # Improved CSS for better markdown-like appearance
+            html_with_css = f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <style>
+                    @page {{
+                        margin: 2cm;
+                        size: A4;
+                    }}
+                    body {{ 
+                        font-family: "Segoe UI", Arial, sans-serif; 
+                        line-height: 1.6; 
+                        color: #333;
+                        max-width: none;
+                    }}
+                    
+                    /* Headers */
+                    h1 {{ 
+                        font-size: 2em; 
+                        margin: 0.5em 0 0.3em 0;
+                        color: #2c3e50;
+                        border-bottom: 2px solid #3498db;
+                        padding-bottom: 0.2em;
+                    }}
+                    h2 {{ 
+                        font-size: 1.5em; 
+                        margin: 0.7em 0 0.4em 0;
+                        color: #34495e;
+                    }}
+                    h3 {{ 
+                        font-size: 1.2em; 
+                        margin: 0.6em 0 0.3em 0;
+                        color: #2c3e50;
+                    }}
+                    
+                    /* Logo and images */
+                    img {{ 
+                        max-width: 200px; 
+                        height: auto; 
+                        display: block;
+                        margin: 0 0 1em 0;
+                    }}
+                    
+                    /* Tables */
+                    table {{ 
+                        border-collapse: collapse; 
+                        width: 100%; 
+                        margin: 1em 0;
+                        font-size: 0.9em;
+                    }}
+                    th, td {{ 
+                        border: 1px solid #ddd; 
+                        padding: 8px 12px; 
+                        text-align: left;
+                        vertical-align: top;
+                    }}
+                    th {{ 
+                        background-color: #f8f9fa; 
+                        font-weight: bold;
+                        color: #2c3e50;
+                    }}
+                    
+                    /* Code */
+                    code {{ 
+                        background-color: #f8f9fa; 
+                        padding: 2px 6px; 
+                        border-radius: 3px;
+                        font-family: "Consolas", "Monaco", monospace;
+                        font-size: 0.9em;
+                    }}
+                    
+                    /* Lists */
+                    ul, ol {{ 
+                        margin: 0.5em 0; 
+                        padding-left: 2em;
+                    }}
+                    li {{ 
+                        margin: 0.2em 0; 
+                    }}
+                    
+                    /* Special elements */
+                    .no-portfolio-item {{ 
+                        color: #e74c3c; 
+                        font-weight: bold; 
+                        font-style: italic;
+                    }}
+                    
+                    .indicators-list {{ 
+                        margin: 0.5em 0;
+                    }}
+                    .indicators-list li {{ 
+                        margin: 0.3em 0; 
+                    }}
+                    
+                    .feedback-section {{ 
+                        margin: 1em 0; 
+                        background-color: #f8f9fa;
+                        padding: 1em;
+                        border-left: 4px solid #3498db;
+                    }}
+                    .feedback-item {{ 
+                        margin-bottom: 1em; 
+                    }}
+                    .feedback-item strong {{ 
+                        color: #2c3e50; 
+                    }}
+                    .feedback-item p {{ 
+                        margin: 0.5em 0 0 0; 
+                        line-height: 1.4; 
+                    }}
+                    
+                    /* Horizontal rules */
+                    hr {{
+                        border: none;
+                        border-top: 1px solid #bdc3c7;
+                        margin: 2em 0;
+                    }}
+                    
+                    /* Paragraphs */
+                    p {{
+                        margin: 0.5em 0;
+                    }}
+                    
+                    /* Emphasis */
+                    em {{
+                        font-style: italic;
+                        color: #7f8c8d;
+                    }}
+                    
+                    strong {{
+                        font-weight: bold;
+                        color: #2c3e50;
+                    }}
+                </style>
+            </head>
+            <body>
+            {html_content}
+            </body>
+            </html>
+            """
             
             if WEASYPRINT_AVAILABLE:
                 print("Using WeasyPrint for PDF generation...")
@@ -2213,6 +2550,7 @@ class PortfolioManager:
                         return False
             
             return True
+            
         except Exception as e:
             print(f"Error generating PDF: {e}")
             return False
@@ -2706,7 +3044,15 @@ class PortfolioManager:
             with open('canvas_config.json', 'w') as f:
                 json.dump(self.canvas_config, f, indent=2)
             
-            self.show_success_dialog("Success", "Canvas API token saved successfully!")
+            if self.in_automatic_setup:
+                # During automatic setup, guide user to course selection
+                self.show_success_dialog("Success", "Canvas API token saved! Now please select your course.")
+                # Automatically load courses for easy selection
+                self.load_canvas_courses()
+            else:
+                # Normal token save flow
+                self.show_success_dialog("Success", "Canvas API token saved successfully!")
+            
             print(f"DEBUG: Canvas token saved")
         except Exception as ex:
             self.show_error_dialog("Error", f"Failed to save token: {str(ex)}")
@@ -2840,21 +3186,28 @@ class PortfolioManager:
                 f"Selected course:\n{course_name}\n\nYou can now view assignments and manage submissions for this course."
             )
             
-            # Show the TO DO container in main view and update it
-            if self.canvas_todo_container:
-                # Make the TO DO container visible in main view
-                if hasattr(self, 'main_content') and self.current_view == "main":
-                    # Find the TO DO container in the main view and make it visible
-                    for container in self.main_content.controls:
-                        if hasattr(container, 'content') and hasattr(container.content, 'controls'):
-                            for row_item in container.content.controls:
-                                if hasattr(row_item, 'content') and len(row_item.content.controls) > 1:
-                                    todo_container = row_item.content.controls[1]  # Second item is TO DO
-                                    todo_container.visible = True
-                
-                # Update the TO DO list and submission counter
-                self.update_canvas_todo_list()
-                self.update_canvas_submission_counter()
+            # Check if we're in automatic setup mode
+            if self.in_automatic_setup:
+                # Complete automatic setup and go to main view
+                self.in_automatic_setup = False
+                self.show_main_view()
+            else:
+                # Normal course selection flow
+                # Show the TO DO container in main view and update it
+                if self.canvas_todo_container:
+                    # Make the TO DO container visible in main view
+                    if hasattr(self, 'main_content') and self.current_view == "main":
+                        # Find the TO DO container in the main view and make it visible
+                        for container in self.main_content.controls:
+                            if hasattr(container, 'content') and hasattr(container.content, 'controls'):
+                                for row_item in container.content.controls:
+                                    if hasattr(row_item, 'content') and len(row_item.content.controls) > 1:
+                                        todo_container = row_item.content.controls[1]  # Second item is TO DO
+                                        todo_container.visible = True
+                    
+                    # Update the TO DO list and submission counter
+                    self.update_canvas_todo_list()
+                    self.update_canvas_submission_counter()
             
             print(f"DEBUG: Selected course {course_id}: {course_name}")
             
