@@ -637,6 +637,7 @@ class PortfolioManager:
         # UI Components
         self.info_text = ft.Text("", size=14)
         self.attention_card = ft.Card(visible=False, expand=False)
+        self.connection_status_card = ft.Card(visible=True, expand=False)
         self.portfolio_data_table = ft.DataTable(
             columns=[
                 ft.DataColumn(ft.Text(self.get_text("table_title"))),
@@ -760,7 +761,7 @@ class PortfolioManager:
         
         # Main content
         main_content = ft.Column([
-            # Top row: Student info, Submission counter, and Canvas TO DO
+            # Top row: Student info, Submission counter, Status cards, and Canvas TO DO - all centered
             ft.Container(
                 content=ft.Row([
                     # Student info card - left side
@@ -782,36 +783,45 @@ class PortfolioManager:
                             ),
                             margin=ft.margin.only(bottom=10)
                         ),
-                        width=280  # Same width as TO DO list
+                        width=260,  # Reduced width
+                        alignment=ft.alignment.top_center  # Align to top
                     ),
                     
                     # Submission counter - center
                     ft.Container(
                         content=self.create_submission_counter_card(),
-                        width=200,
-                        visible=bool(self.canvas_config.get('selected_course_id'))  # Show if course is selected
+                        width=180,  # Reduced width
+                        visible=bool(self.canvas_config.get('selected_course_id')),  # Show if course is selected
+                        alignment=ft.alignment.top_center  # Align to top
                     ),
                     
-                    # Feedback attention card - between stats and TODO
+                    # Status cards column - Connection Status and Feedback stacked
                     ft.Container(
-                        content=self.attention_card,
-                        width=300,
-                        margin=ft.margin.only(left=15, right=15)
+                        content=ft.Column([
+                            # Connection status card
+                            self.create_connection_status_card(),
+                            # Feedback attention card
+                            ft.Container(
+                                content=self.attention_card,
+                                margin=ft.margin.only(top=5)
+                            )
+                        ], spacing=5),
+                        width=240,  # Slightly increased width for better fit
+                        margin=ft.margin.only(left=10, right=10),
+                        height=250,  # Match Student Information card height
+                        alignment=ft.alignment.top_center  # Align to top
                     ),
                     
-                    # Spacer to push TO DO to the right
-                    ft.Container(
-                        expand=1
-                    ),
-                    
-                    # Canvas TO DO list - right side (narrower)
+                    # Canvas TO DO list - right side
                     ft.Container(
                         content=self.create_canvas_todo_card(),
-                        width=280,  # Fixed width instead of expand
-                        visible=bool(self.canvas_config.get('selected_course_id'))  # Show if course is selected
+                        width=260,  # Reduced width to fit
+                        visible=bool(self.canvas_config.get('selected_course_id')),  # Show if course is selected
+                        alignment=ft.alignment.top_center  # Align to top
                     )
-                ], spacing=20),
-                margin=ft.margin.only(bottom=10)
+                ], spacing=15, alignment=ft.MainAxisAlignment.CENTER),  # Center all cards horizontally
+                margin=ft.margin.only(bottom=10),
+                alignment=ft.alignment.center  # Center the entire row container
             ),
             
             # Action buttons - centered
@@ -897,6 +907,9 @@ class PortfolioManager:
         if self.canvas_config.get('selected_course_id'):
             self.update_canvas_todo_list()
             self.update_canvas_submission_counter()
+        
+        # Update connection status
+        self.update_connection_status()
         
         self.update_display()
 
@@ -1061,9 +1074,19 @@ class PortfolioManager:
         )
         
         # GitHub link with enhanced file selection
+        # Check if we have a selected GitHub URL from file browser
+        github_url_value = ''
+        if existing_item:
+            github_url_value = existing_item.get('github_link', '')
+        elif hasattr(self, 'selected_github_url'):
+            github_url_value = self.selected_github_url
+            print(f"DEBUG: Using stored GitHub URL: {github_url_value}")
+            # Clear the stored URL after using it
+            delattr(self, 'selected_github_url')
+        
         github_field = ft.TextField(
             label=self.get_text("github_link_label"),
-            value=existing_item.get('github_link', '') if existing_item else '',
+            value=github_url_value,
             width=600
         )
         
@@ -1158,11 +1181,16 @@ class PortfolioManager:
             
             # Add Canvas assignment link if selected
             if canvas_assignment_dropdown.value and canvas_assignment_dropdown.value != "":
-                item_data["canvas_assignment_id"] = int(canvas_assignment_dropdown.value)
-                item_data["canvas_assignment_name"] = next(
-                    (opt.text for opt in canvas_assignment_dropdown.options if opt.key == canvas_assignment_dropdown.value),
-                    "Unknown Assignment"
-                )
+                try:
+                    item_data["canvas_assignment_id"] = int(canvas_assignment_dropdown.value)
+                    item_data["canvas_assignment_name"] = next(
+                        (opt.text for opt in canvas_assignment_dropdown.options if opt.key == canvas_assignment_dropdown.value),
+                        "Unknown Assignment"
+                    )
+                except ValueError:
+                    # Skip if conversion fails (shouldn't happen with proper dropdown values)
+                    print(f"DEBUG: Invalid Canvas assignment ID: {canvas_assignment_dropdown.value}")
+                    pass
             
             if assignment_type.value == "group" and group_members_field.value:
                 item_data["group_members"] = [member.strip() for member in group_members_field.value.split("\n") if member.strip()]
@@ -1808,24 +1836,29 @@ class PortfolioManager:
                 attention_text = self.get_text("attention_items_without_feedback_multiple").format(items_without_feedback)
             
             self.attention_card.content = ft.Container(
-                content=ft.Row([
-                    ft.Icon(ft.Icons.WARNING, color=ft.Colors.RED),
-                    ft.Text(self.get_text("important"), weight=ft.FontWeight.BOLD, color=ft.Colors.RED),
-                    ft.Text(attention_text, color=ft.Colors.RED)
-                ], wrap=True),
-                padding=20,
-                bgcolor=ft.Colors.RED_50
+                content=ft.Column([
+                    ft.Text("⚠️ " + self.get_text("important"), size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.RED_700, text_align=ft.TextAlign.CENTER),
+                    ft.Container(height=8),
+                    ft.Text(attention_text, size=12, color=ft.Colors.RED_600, text_align=ft.TextAlign.CENTER)
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                padding=15,
+                height=110,  # Match connection status card height
+                bgcolor=ft.Colors.RED_50,
+                border_radius=8
             )
             self.attention_card.visible = True
         else:
             if self.portfolio_items:  # Only show if there are items
                 self.attention_card.content = ft.Container(
-                    content=ft.Row([
-                        ft.Icon(ft.Icons.CHECK_CIRCLE, color=ft.Colors.GREEN),
-                        ft.Text(self.get_text("attention_all_items_have_feedback"), color=ft.Colors.GREEN)
-                    ], wrap=True),
-                    padding=20,
-                    bgcolor=ft.Colors.GREEN_50
+                    content=ft.Column([
+                        ft.Text("✅ All Good!", size=14, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700, text_align=ft.TextAlign.CENTER),
+                        ft.Container(height=8),
+                        ft.Text(self.get_text("attention_all_items_have_feedback"), size=12, color=ft.Colors.GREEN_600, text_align=ft.TextAlign.CENTER)
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                    padding=15,
+                    height=110,  # Match connection status card height
+                    bgcolor=ft.Colors.GREEN_50,
+                    border_radius=8
                 )
                 self.attention_card.visible = True
             else:
@@ -2421,7 +2454,15 @@ class PortfolioManager:
                     content.append("| Portfolio-item     | Beschrijving                                           | Bewijslast               |")
                     content.append("|--------------------|--------------------------------------------------------|--------------------------|")
                     for item in personal_items:
-                        content.append(f"| {item.get('title', 'Portfolio-item')} | {item.get('description', 'Beschrijving niet beschikbaar')} | [link naar {item.get('github_link', 'repository')}]({item.get('github_link', 'http://')}) |")
+                        github_link = item.get('github_link', 'http://')
+                        # Create a more descriptive link text
+                        if github_link and github_link != 'http://':
+                            link_text = "GitHub Repository"
+                            if '/blob/' in github_link:
+                                link_text = "GitHub File"
+                        else:
+                            link_text = "repository"
+                        content.append(f"| {item.get('title', 'Portfolio-item')} | {item.get('description', 'Beschrijving niet beschikbaar')} | [{link_text}]({github_link}) |")
                     content.append("")
                     for item in personal_items:
                         relevant_feedback = [feedback for feedback in item.get('feedback', []) 
@@ -2442,7 +2483,15 @@ class PortfolioManager:
                     content.append("| Portfolio-item     | Beschrijving                                           | Bewijslast               |")
                     content.append("|--------------------|--------------------------------------------------------|--------------------------|")
                     for item in group_items:
-                        content.append(f"| {item.get('title', 'Portfolio-item')} | {item.get('description', 'Beschrijving niet beschikbaar')} | [link naar {item.get('github_link', 'repository')}]({item.get('github_link', 'http://')}) |")
+                        github_link = item.get('github_link', 'http://')
+                        # Create a more descriptive link text
+                        if github_link and github_link != 'http://':
+                            link_text = "GitHub Repository"
+                            if '/blob/' in github_link:
+                                link_text = "GitHub File"
+                        else:
+                            link_text = "repository"
+                        content.append(f"| {item.get('title', 'Portfolio-item')} | {item.get('description', 'Beschrijving niet beschikbaar')} | [{link_text}]({github_link}) |")
                     content.append("")
                     for item in group_items:
                         relevant_feedback = [feedback for feedback in item.get('feedback', []) 
@@ -3133,6 +3182,54 @@ class PortfolioManager:
                 ft.Text("?", size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.GREY_600, text_align=ft.TextAlign.CENTER),
                 ft.Text("Error loading", size=10, color=ft.Colors.RED_600, text_align=ft.TextAlign.CENTER)
             ])
+    
+    def create_connection_status_card(self):
+        """Create the connection status card showing GitHub and Canvas connectivity"""
+        # Check GitHub connection
+        github_connected = bool(self.github_integration and hasattr(self.github_integration, 'session'))
+        github_status_text = "✅ Connected" if github_connected else "❌ Not Connected"
+        github_color = ft.Colors.GREEN_600 if github_connected else ft.Colors.RED_600
+        
+        # Check Canvas connection
+        canvas_connected = bool(self.canvas_config.get('selected_course_id') and self.canvas_integration)
+        canvas_status_text = "✅ Connected" if canvas_connected else "❌ Not Connected"
+        canvas_color = ft.Colors.GREEN_600 if canvas_connected else ft.Colors.RED_600
+        
+        # Create the connection status card with more compact layout
+        connection_card = ft.Card(
+            content=ft.Container(
+                content=ft.Column([
+                    ft.Text("🔗 Connection Status", size=13, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
+                    ft.Container(height=6),
+                    # GitHub status row with better spacing
+                    ft.Row([
+                        ft.Icon(ft.Icons.CODE, size=14),
+                        ft.Text("GitHub:", size=11, weight=ft.FontWeight.BOLD),
+                        ft.Text(github_status_text, size=11, color=github_color)
+                    ], spacing=3, alignment=ft.MainAxisAlignment.CENTER),
+                    ft.Container(height=3),
+                    # Canvas status row with better spacing
+                    ft.Row([
+                        ft.Icon(ft.Icons.SCHOOL, size=14),
+                        ft.Text("Canvas:", size=11, weight=ft.FontWeight.BOLD),
+                        ft.Text(canvas_status_text, size=11, color=canvas_color)
+                    ], spacing=3, alignment=ft.MainAxisAlignment.CENTER),
+                ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=0),
+                padding=12,  # Optimized padding
+                height=110   # Maintained height for consistent layout
+            ),
+            margin=ft.margin.only(bottom=5)
+        )
+        
+        return connection_card
+    
+    def update_connection_status(self):
+        """Update the connection status card"""
+        # Recreate the card with current status
+        new_card = self.create_connection_status_card()
+        self.connection_status_card.content = new_card.content
+        if hasattr(self, 'page'):
+            self.page.update()
     
     def update_canvas_todo_list(self):
         """Update the Canvas TO DO list with assignments"""
@@ -3978,7 +4075,7 @@ class PortfolioManager:
                     ft.IconButton(
                         icon=ft.Icons.ARROW_BACK,
                         tooltip="Back to Portfolio Creation",
-                        on_click=lambda e: self.show_portfolio_add_view()
+                        on_click=self.return_to_portfolio_creation
                     ),
                     ft.Column([
                         ft.Text("GitHub File Browser", size=24, weight=ft.FontWeight.BOLD),
@@ -4158,6 +4255,11 @@ class PortfolioManager:
         
     def browse_github_folder_view(self, repo_full_name, folder_path):
         """Browse a specific folder and update the current view"""
+        # Check if we're in the process of returning from GitHub browser
+        if getattr(self, 'returning_from_github', False):
+            print(f"DEBUG: Skipping folder browse - returning from GitHub")
+            return
+            
         print(f"DEBUG: Browsing folder {folder_path} in {repo_full_name}")
         
         # Store current browsing state
@@ -4215,7 +4317,7 @@ class PortfolioManager:
                     ft.IconButton(
                         icon=ft.Icons.ARROW_BACK,
                         tooltip="Back to Portfolio Creation",
-                        on_click=lambda e: self.show_portfolio_add_view()
+                        on_click=self.return_to_portfolio_creation
                     ),
                     ft.Column([
                         ft.Text("GitHub File Browser", size=24, weight=ft.FontWeight.BOLD),
@@ -4244,12 +4346,43 @@ class PortfolioManager:
         """Select a GitHub file and return to portfolio creation"""
         print(f"DEBUG: Selected file: {file_url}")
         
-        # Set the GitHub field value
-        if hasattr(self, 'current_github_field') and self.current_github_field:
-            self.current_github_field.value = file_url
+        # Store the selected file URL to be set when we return to the form
+        self.selected_github_url = file_url
+        print(f"DEBUG: Stored GitHub URL: {file_url}")
             
-        # Return to portfolio creation view
-        self.show_portfolio_add_view()
+        # Return to portfolio creation view using the same method as return button
+        print(f"DEBUG: Returning to portfolio creation view")
+        self.return_to_portfolio_creation()
+
+    def return_to_portfolio_creation(self, e=None):
+        """Return from GitHub file browser to portfolio creation view"""
+        print(f"DEBUG: Return button clicked - going back to portfolio creation")
+        
+        # Clear any stored browsing state to prevent auto-navigation
+        if hasattr(self, 'current_repo'):
+            delattr(self, 'current_repo')
+        if hasattr(self, 'current_folder_path'):
+            delattr(self, 'current_folder_path')
+        
+        # Set a flag to prevent re-entering file browser
+        self.returning_from_github = True
+        
+        # Restore the proper page structure since GitHub browser cleared it
+        print(f"DEBUG: Restoring page structure and returning to portfolio creation")
+        
+        # Clear the page completely
+        self.page.controls.clear()
+        
+        # Recreate the content container structure
+        self.page.add(self.content_container)
+        
+        # Show the portfolio item view
+        self.show_add_portfolio_item_view()
+        
+        # Clear the flag
+        self.returning_from_github = False
+        
+        print(f"DEBUG: Completed return to portfolio creation")
 
     def create_github_file_tree(self, repo_full_name, github_field):
         """Create a file tree for a GitHub repository"""
@@ -4328,6 +4461,11 @@ class PortfolioManager:
 
     def browse_github_folder(self, repo_full_name, folder_path, github_field):
         """Browse a specific folder in GitHub repository"""
+        # Check if we're in the process of returning from GitHub browser
+        if getattr(self, 'returning_from_github', False):
+            print(f"DEBUG: Skipping folder browse - returning from GitHub")
+            return
+            
         try:
             contents = self.github_integration.get_repository_contents(repo_full_name, folder_path)
             
