@@ -694,7 +694,7 @@ class PortfolioManager:
                     ft.PopupMenuItem(text=self.get_text("menu_feedback"), on_click=self.show_feedback_info),
                     ft.PopupMenuItem(),  # Separator
                     ft.PopupMenuItem(text=self.get_text("menu_student_info"), on_click=self.show_student_info_view),
-                    ft.PopupMenuItem(text=self.get_text("menu_github"), on_click=self.setup_github),
+                    ft.PopupMenuItem(text=self.get_text("menu_github"), on_click=self.show_github_integration_view),
                     ft.PopupMenuItem(text=self.get_text("menu_canvas"), on_click=lambda e: self.debug_canvas_click(e)),
                     ft.PopupMenuItem(),  # Separator
                     ft.PopupMenuItem(text=self.get_text("menu_export"), on_click=self.export_data),
