@@ -3185,16 +3185,20 @@ class PortfolioManager:
     
     def create_connection_status_card(self):
         """Create the connection status card showing GitHub and Canvas connectivity"""
-        # Check GitHub connection
-        github_connected = bool(self.github_integration and hasattr(self.github_integration, 'session'))
+        # Check GitHub connection (treat as connected if integration exists and has username or token)
+        github_connected = bool(
+            self.github_integration and (
+                getattr(self.github_integration, 'username', None) or getattr(self.github_integration, 'access_token', None)
+            )
+        )
         github_status_text = "✅ Connected" if github_connected else "❌ Not Connected"
         github_color = ft.Colors.GREEN_600 if github_connected else ft.Colors.RED_600
-        
+
         # Check Canvas connection
         canvas_connected = bool(self.canvas_config.get('selected_course_id') and self.canvas_integration)
         canvas_status_text = "✅ Connected" if canvas_connected else "❌ Not Connected"
         canvas_color = ft.Colors.GREEN_600 if canvas_connected else ft.Colors.RED_600
-        
+
         # Create the connection status card with more compact layout
         connection_card = ft.Card(
             content=ft.Container(
@@ -3220,7 +3224,7 @@ class PortfolioManager:
             ),
             margin=ft.margin.only(bottom=5)
         )
-        
+
         return connection_card
     
     def update_connection_status(self):
