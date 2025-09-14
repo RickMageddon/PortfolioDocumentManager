@@ -3151,6 +3151,7 @@ class PortfolioManager:
                 assignments = response.json()
                 submitted_count = 0
                 needs_feedback_count = 0
+                late_count = 0
                 
                 for assignment in assignments:
                     submission = assignment.get('submission')
@@ -3160,17 +3161,48 @@ class PortfolioManager:
                         # Check if needs feedback (no grade or comments)
                         if not submission.get('score') and not submission.get('comment'):
                             needs_feedback_count += 1
+                        
+                        # Determine if this submission was late
+                        try:
+                            # Prefer Canvas-provided late flag if available
+                            if isinstance(submission.get('late'), bool):
+                                if submission.get('late'):
+                                    late_count += 1
+                            else:
+                                # Fallback: compare submitted_at vs due_at
+                                due_at = assignment.get('due_at')
+                                submitted_at = submission.get('submitted_at')
+                                if due_at and submitted_at:
+                                    # Normalize ISO strings and compare as naive datetimes
+                                    due_dt = datetime.datetime.fromisoformat(due_at.replace('Z', '+00:00')).replace(tzinfo=None)
+                                    sub_dt = datetime.datetime.fromisoformat(submitted_at.replace('Z', '+00:00')).replace(tzinfo=None)
+                                    if sub_dt > due_dt:
+                                        late_count += 1
+                        except Exception as _ex:
+                            # Be tolerant to any parsing issues
+                            pass
                 
                 # Update the display
                 self.canvas_submission_content.controls.clear()
-                self.canvas_submission_content.controls.extend([
+                controls = [
                     ft.Text(str(submitted_count), size=32, weight=ft.FontWeight.BOLD, color=ft.Colors.GREEN_700, text_align=ft.TextAlign.CENTER),
                     ft.Text("Submissions", size=12, color=ft.Colors.GREY_600, text_align=ft.TextAlign.CENTER),
                     ft.Container(height=5),
                     ft.Text(f"💬 {needs_feedback_count} need feedback", size=10, color=ft.Colors.ORANGE_600, text_align=ft.TextAlign.CENTER) if needs_feedback_count > 0 else ft.Text("✅ All have feedback", size=10, color=ft.Colors.GREEN_600, text_align=ft.TextAlign.CENTER),
+                ]
+
+                # Add late submissions line if any
+                if late_count > 0:
+                    controls.extend([
+                        ft.Container(height=5),
+                        ft.Text(f"⏰ {late_count} late submission(s)", size=10, color=ft.Colors.RED_600, text_align=ft.TextAlign.CENTER)
+                    ])
+
+                controls.extend([
                     ft.Container(height=5),
                     ft.Text("📈 Keep it up!", size=10, color=ft.Colors.BLUE_600, text_align=ft.TextAlign.CENTER)
                 ])
+                self.canvas_submission_content.controls.extend(controls)
                 
                 # Update the page
                 self.page.update()
@@ -3252,10 +3284,40 @@ class PortfolioManager:
             canvas = CanvasIntegration(self.canvas_config['canvas_url'], token)
             assignments = canvas.get_upcoming_assignments(selected_course_id, days_ahead=30)
             
+            # Also compute overdue (past due and not submitted) assignments
+            overdue_assignments = []
+            try:
+                url = f"{canvas.canvas_url}/api/v1/courses/{selected_course_id}/assignments"
+                params = {'per_page': 100, 'include[]': ['submission']}
+                resp = canvas.session.get(url, params=params)
+                if resp.status_code == 200:
+                    all_assignments = resp.json()
+                    now = datetime.datetime.now()
+                    for a in all_assignments:
+                        due_at = a.get('due_at')
+                        submission = a.get('submission')
+                        is_submitted = bool(submission and submission.get('submitted_at'))
+                        if due_at and not is_submitted:
+                            try:
+                                due_dt = datetime.datetime.fromisoformat(due_at.replace('Z', '+00:00')).replace(tzinfo=None)
+                                if due_dt < now:
+                                    overdue_assignments.append({
+                                        'id': a.get('id'),
+                                        'name': a.get('name', 'Unknown Assignment'),
+                                        'due_at': due_at,
+                                        'due_date_formatted': due_dt.strftime('%Y-%m-%d %H:%M')
+                                    })
+                            except Exception:
+                                continue
+                # Sort overdue by most recent first
+                overdue_assignments.sort(key=lambda x: x['due_at'] or '', reverse=True)
+            except Exception:
+                pass
+            
             # Clear existing content
             self.canvas_todo_content.controls.clear()
             
-            if not assignments:
+            if not assignments and not overdue_assignments:
                 self.canvas_todo_content.controls.append(
                     ft.Text("No upcoming assignments", size=12, color=ft.Colors.GREY_600)
                 )
@@ -3264,6 +3326,43 @@ class PortfolioManager:
                 self.canvas_todo_content.controls.append(
                     ft.Text(f"📚 {selected_course_name}", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_700)
                 )
+                
+                # Overdue section (if any)
+                if overdue_assignments:
+                    self.canvas_todo_content.controls.append(
+                        ft.Container(height=6)
+                    )
+                    self.canvas_todo_content.controls.append(
+                        ft.Text("⏰ Overdue", size=12, weight=ft.FontWeight.BOLD, color=ft.Colors.RED_700)
+                    )
+                    for assignment in overdue_assignments:
+                        name = assignment.get('name', 'Unknown Assignment')
+                        due_date = assignment.get('due_date_formatted', 'No due date')
+                        assignment_item = ft.Container(
+                            content=ft.Row([
+                                ft.Text(name, size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.RED_800),
+                                ft.Container(
+                                    content=ft.Text("Overdue", size=9, color=ft.Colors.WHITE),
+                                    padding=ft.padding.symmetric(vertical=2, horizontal=4),
+                                    bgcolor=ft.Colors.RED_600,
+                                    border_radius=4
+                                )
+                            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                            padding=5,
+                            margin=2,
+                            bgcolor=ft.Colors.RED_50,
+                            border_radius=5
+                        )
+                        # Add due date line below
+                        self.canvas_todo_content.controls.append(
+                            ft.Column([
+                                assignment_item,
+                                ft.Container(
+                                    content=ft.Text(f"Due: {due_date}", size=10, color=ft.Colors.RED_600),
+                                    padding=ft.padding.only(left=5, right=5, bottom=5)
+                                )
+                            ], spacing=2)
+                        )
                 
                 # Add all assignments (no limit)
                 for assignment in assignments:
