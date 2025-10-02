@@ -105,8 +105,17 @@ class PortfolioManager:
         self.github_integration = None
         self.github_config = {}
         if GITHUB_AVAILABLE:
-            self.github_config = GitHubConfig.load()
-            self.setup_github_integration()
+            try:
+                # Try to load GitHubConfig and convert to dict
+                github_config_obj = GitHubConfig.load()
+                if hasattr(github_config_obj, '__dict__'):
+                    self.github_config = github_config_obj.__dict__.copy()
+                else:
+                    self.github_config = {}
+                self.setup_github_integration()
+            except Exception as e:
+                print(f"DEBUG: GitHub config load failed: {e}")
+                self.github_config = {}
         
         # Language translations
         self.translations = {
@@ -1106,7 +1115,7 @@ class PortfolioManager:
             icon=ft.Icons.FOLDER_OPEN,
             on_click=lambda e: self.show_github_file_browser(github_field),
             style=ft.ButtonStyle(bgcolor=ft.Colors.PURPLE_600, color=ft.Colors.WHITE),
-            visible=bool(self.github_config.private_repo or self.github_config.shared_repo)
+            visible=bool(self.github_config.get('private_repo') or self.github_config.get('shared_repo'))
         )
         
         # Canvas assignment selection
@@ -2914,6 +2923,14 @@ class PortfolioManager:
             hint_text="Enter your Canvas API token here..."
         )
         
+        # Create Canvas URL input field
+        self.canvas_url_field = ft.TextField(
+            label="Canvas URL",
+            value=self.canvas_config.get('canvas_url', 'https://canvas.hu.nl'),
+            width=500,
+            hint_text="e.g: https://canvas.university.edu"
+        )
+        
         # Create course list container
         self.canvas_course_list = ft.Column(
             controls=[],
@@ -2956,37 +2973,23 @@ class PortfolioManager:
                 margin=ft.margin.only(bottom=20)
             ),
             
-            # Canvas URL info
+            # Canvas URL and Token input section
             ft.Container(
                 content=ft.Card(
                     content=ft.Container(
                         content=ft.Column([
-                            ft.Text("Canvas URL", size=16, weight=ft.FontWeight.BOLD),
-                            ft.Text(f"{self.canvas_config.get('canvas_url', 'Not set')}", size=14, color=ft.Colors.GREY_700),
-                        ]),
-                        padding=20
-                    )
-                ),
-                width=600,
-                alignment=ft.alignment.center,
-                margin=ft.margin.only(bottom=20)
-            ),
-            
-            # Token input section
-            ft.Container(
-                content=ft.Card(
-                    content=ft.Container(
-                        content=ft.Column([
-                            ft.Text("API Token", size=16, weight=ft.FontWeight.BOLD),
-                            ft.Text("Enter your Canvas API token to connect to your account:", size=14, color=ft.Colors.GREY_700),
+                            ft.Text("Canvas Configuration", size=16, weight=ft.FontWeight.BOLD),
+                            ft.Text("Configure your Canvas URL and API token:", size=14, color=ft.Colors.GREY_700),
+                            ft.Container(height=10),
+                            self.canvas_url_field,
                             ft.Container(height=10),
                             self.canvas_token_field,
                             ft.Container(height=15),
                             ft.Row([
                                 ft.ElevatedButton(
-                                    text="Save Token",
+                                    text="Save Configuration",
                                     icon=ft.Icons.SAVE,
-                                    on_click=self.save_canvas_token,
+                                    on_click=self.save_canvas_config,
                                     style=ft.ButtonStyle(bgcolor=ft.Colors.GREEN_600, color=ft.Colors.WHITE)
                                 ),
                                 ft.ElevatedButton(
@@ -3392,6 +3395,37 @@ class PortfolioManager:
                 ft.Text("Error loading assignments", size=12, color=ft.Colors.RED_600)
             )
     
+    def save_canvas_config(self, e=None):
+        """Save the Canvas URL and API token"""
+        url = self.canvas_url_field.value.strip()
+        token = self.canvas_token_field.value.strip()
+        
+        if not url:
+            self.show_error_dialog("Error", "Please enter a Canvas URL.")
+            return
+            
+        if not token:
+            self.show_error_dialog("Error", "Please enter a Canvas API token.")
+            return
+        
+        # Ensure URL has https://
+        if not url.startswith('http'):
+            url = 'https://' + url
+        
+        # Update canvas config
+        self.canvas_config['canvas_url'] = url
+        self.canvas_config['access_token'] = token
+        
+        # Save to file
+        try:
+            with open('canvas_config.json', 'w') as f:
+                json.dump(self.canvas_config, f, indent=2)
+            
+            self.show_success_dialog("Success", "Canvas configuration saved successfully!")
+            print(f"DEBUG: Canvas config saved - URL: {url}")
+        except Exception as ex:
+            self.show_error_dialog("Error", f"Failed to save Canvas configuration: {str(ex)}")
+
     def save_canvas_token(self, e=None):
         """Save the Canvas API token"""
         token = self.canvas_token_field.value.strip()
@@ -3753,14 +3787,14 @@ class PortfolioManager:
     # GitHub Integration Methods
     def setup_github_integration(self):
         """Setup GitHub integration if configured"""
-        if GITHUB_AVAILABLE and self.github_config.access_token:
+        if GITHUB_AVAILABLE and self.github_config.get('access_token'):
             try:
-                self.github_integration = GitHubIntegration(self.github_config.access_token)
+                self.github_integration = GitHubIntegration(self.github_config.get('access_token'))
                 success, message = self.github_integration.test_connection()
                 if success:
                     print(f"GitHub integration initialized successfully: {message}")
-                    self.github_config.username = self.github_integration.username
-                    self.github_config.save()
+                    self.github_config['username'] = self.github_integration.username
+                    # Note: save() method might not exist for dict, will handle separately
                 else:
                     print(f"GitHub connection test failed: {message}")
                     self.github_integration = None
@@ -3773,13 +3807,13 @@ class PortfolioManager:
         self.current_view = "github"
         print(f"DEBUG: GitHub integration view method called")
         print(f"DEBUG: Current view: {getattr(self, 'current_view', 'not set')}")
-        print(f"DEBUG: GitHub config: {self.github_config.__dict__}")
+        print(f"DEBUG: GitHub config: {self.github_config}")
         print(f"DEBUG: GitHub available: {GITHUB_AVAILABLE}")
 
         # GitHub token input field
         self.github_token_field = ft.TextField(
             label=self.get_text("github_token_label"),
-            value=self.github_config.access_token,
+            value=self.github_config.get('access_token', ''),
             password=True,
             width=500,
             hint_text=self.get_text("github_token_placeholder")
@@ -3922,23 +3956,22 @@ class PortfolioManager:
             return
         
         # Update GitHub config
-        self.github_config.access_token = token
+        self.github_config['access_token'] = token
         
         # Save to file
         try:
-            if self.github_config.save():
-                # Test the token
-                success, message = self.test_github_connection_silent()
-                if success:
-                    self.show_success_dialog("Success", f"GitHub token saved successfully!\n{message}")
-                    # Automatically try to load repositories for easy selection
-                    self.load_github_repositories()
-                else:
-                    self.show_error_dialog("Token Saved with Warning", f"GitHub token saved but connection test failed:\n{message}")
-                
-                print(f"DEBUG: GitHub token saved")
+            # Save data since github_config is a dict
+            self.save_data()
+            # Test the token
+            success, message = self.test_github_connection_silent()
+            if success:
+                self.show_success_dialog("Success", f"GitHub token saved successfully!\n{message}")
+                # Automatically try to load repositories for easy selection
+                self.load_github_repositories()
             else:
-                self.show_error_dialog("Error", "Failed to save GitHub token to file.")
+                self.show_error_dialog("Token Saved with Warning", f"GitHub token saved but connection test failed:\n{message}")
+            
+            print(f"DEBUG: GitHub token saved")
         except Exception as ex:
             self.show_error_dialog("Error", f"Failed to save token: {str(ex)}")
 
@@ -3959,7 +3992,7 @@ class PortfolioManager:
             
             if success:
                 self.github_integration = github
-                self.github_config.username = github.username
+                self.github_config['username'] = github.username
                 self.show_success_dialog("Connection Test", f"✅ {message}")
             else:
                 self.show_error_dialog("Connection Test", f"❌ {message}")
@@ -3970,11 +4003,11 @@ class PortfolioManager:
     def test_github_connection_silent(self):
         """Test GitHub connection without showing dialogs"""
         try:
-            github = GitHubIntegration(self.github_config.access_token)
+            github = GitHubIntegration(self.github_config.get('access_token'))
             success, message = github.test_connection()
             if success:
                 self.github_integration = github
-                self.github_config.username = github.username
+                self.github_config['username'] = github.username
             return success, message
         except Exception as ex:
             return False, str(ex)
@@ -3986,7 +4019,7 @@ class PortfolioManager:
             return
         
         if not self.github_integration:
-            token = self.github_config.access_token or self.github_token_field.value.strip()
+            token = self.github_config.get('access_token') or self.github_token_field.value.strip()
             if not token:
                 self.show_error_dialog("Error", "Please set up your GitHub token first.")
                 return
@@ -4076,33 +4109,29 @@ class PortfolioManager:
 
     def select_private_repo(self, repo_full_name):
         """Select a repository as the private repository"""
-        self.github_config.private_repo = repo_full_name
-        if self.github_config.save():
-            self.show_success_dialog("Repository Selected", f"Private repository set to:\n{repo_full_name}")
-            self.update_selected_repos_display()
-        else:
-            self.show_error_dialog("Error", "Failed to save repository selection.")
+        self.github_config['private_repo'] = repo_full_name
+        self.save_data()  # Save to main data file
+        self.show_success_dialog("Repository Selected", f"Private repository set to:\n{repo_full_name}")
+        self.update_selected_repos_display()
 
     def select_shared_repo(self, repo_full_name):
         """Select a repository as the shared repository"""
-        self.github_config.shared_repo = repo_full_name
-        if self.github_config.save():
-            self.show_success_dialog("Repository Selected", f"Shared repository set to:\n{repo_full_name}")
-            self.update_selected_repos_display()
-        else:
-            self.show_error_dialog("Error", "Failed to save repository selection.")
+        self.github_config['shared_repo'] = repo_full_name
+        self.save_data()  # Save to main data file
+        self.show_success_dialog("Repository Selected", f"Shared repository set to:\n{repo_full_name}")
+        self.update_selected_repos_display()
 
     def update_selected_repos_display(self):
         """Update the display of selected repositories"""
         # Update private repo display
-        if self.github_config.private_repo:
+        if self.github_config.get('private_repo'):
             self.github_private_repo_container.content = ft.Card(
                 content=ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.LOCK, color=ft.Colors.ORANGE_600),
                         ft.Column([
                             ft.Text("Private Repository:", size=12, weight=ft.FontWeight.BOLD),
-                            ft.Text(self.github_config.private_repo, size=14, color=ft.Colors.BLUE_700)
+                            ft.Text(self.github_config.get('private_repo'), size=14, color=ft.Colors.BLUE_700)
                         ])
                     ]),
                     padding=10
@@ -4111,14 +4140,14 @@ class PortfolioManager:
             self.github_private_repo_container.visible = True
         
         # Update shared repo display
-        if self.github_config.shared_repo:
+        if self.github_config.get('shared_repo'):
             self.github_shared_repo_container.content = ft.Card(
                 content=ft.Container(
                     content=ft.Row([
                         ft.Icon(ft.Icons.GROUP, color=ft.Colors.BLUE_600),
                         ft.Column([
                             ft.Text("Shared Repository:", size=12, weight=ft.FontWeight.BOLD),
-                            ft.Text(self.github_config.shared_repo, size=14, color=ft.Colors.BLUE_700)
+                            ft.Text(self.github_config.get('shared_repo'), size=14, color=ft.Colors.BLUE_700)
                         ])
                     ]),
                     padding=10
@@ -5011,7 +5040,7 @@ def main(page: ft.Page):
                 error_text,
                 ft.ElevatedButton(
                     "Close Application",
-                    on_click=lambda e: page.window_close()
+                    on_click=lambda e: page.window.close()
                 )
             ], spacing=20),
             padding=20,
