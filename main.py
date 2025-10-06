@@ -527,11 +527,11 @@ class PortfolioManager:
         # General reflection
         content.append("## Algemeen\n")
         content.append(f"*Waar ik het meest trots op ben:*\n")
-        content.append(f"    {self.reflection_data.get('proud_of', '--')}\n")
+        content.append(f'<div class="reflection-box">{self.reflection_data.get("proud_of", "--")}</div>\n')
         content.append(f"*Waar ik de afgelopen periode moeite mee heb gehad en welke actie ik heb ondernomen:*\n")
-        content.append(f"    {self.reflection_data.get('struggled_with', '--')}\n")
+        content.append(f'<div class="reflection-box">{self.reflection_data.get("struggled_with", "--")}</div>\n')
         content.append(f"*Wat ik nog graag wil leren en welke actie ik wil gaan ondernemen:*\n")
-        content.append(f"    {self.reflection_data.get('want_to_learn', '--')}\n")
+        content.append(f'<div class="reflection-box">{self.reflection_data.get("want_to_learn", "--")}</div>\n')
         content.append("---\n")
         
         # Learning outcomes
@@ -639,23 +639,25 @@ class PortfolioManager:
         <head>
             <meta charset="UTF-8">
             <style>
-                body {{ font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }}
+                body {{ font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; word-wrap: break-word; }}
                 h1, h2, h3 {{ color: #333; }}
                 h2.portfolio-header {{ font-size: 1.3em; }}
-                table {{ border-collapse: collapse; width: 100%; margin: 20px 0; }}
-                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; }}
+                table {{ border-collapse: collapse; width: 100%; margin: 20px 0; table-layout: fixed; }}
+                th, td {{ border: 1px solid #ddd; padding: 8px; text-align: left; word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; }}
                 th {{ background-color: #f2f2f2; }}
-                code {{ background-color: #f4f4f4; padding: 2px 4px; border-radius: 3px; }}
-                pre {{ background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }}
+                code {{ background-color: #f4f4f4; padding: 2px 4px; border-radius: 3px; word-wrap: break-word; }}
+                pre {{ background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; word-wrap: break-word; }}
+                p {{ word-wrap: break-word; overflow-wrap: break-word; }}
                 .no-portfolio-item {{ color: red; font-weight: bold; }}
-                h3 + p em {{ font-style: italic; font-size: 0.9em; color: #666; }}
+                h3 + p em {{ font-style: italic; font-size: 0.9em; color: #666; word-wrap: break-word; }}
                 p strong:contains("Indicatoren:") {{ font-weight: bold; }}
                 .indicators-list {{ font-style: normal; font-size: 1em; color: #333; margin-top: 0.5em; }}
                 .indicators-list li {{ margin: 0.2em 0; }}
                 .feedback-section {{ margin: 10px 0; }}
-                .feedback-item {{ margin-bottom: 15px; padding: 10px; background-color: #f9f9f9; border-left: 3px solid #ddd; }}
+                .feedback-item {{ margin-bottom: 15px; padding: 10px; background-color: #f9f9f9; border-left: 3px solid #ddd; word-wrap: break-word; overflow-wrap: break-word; }}
                 .feedback-item strong {{ color: #555; }}
-                .feedback-item p {{ margin: 5px 0 0 0; line-height: 1.4; }}
+                .feedback-item p {{ margin: 5px 0 0 0; line-height: 1.4; word-wrap: break-word; overflow-wrap: break-word; }}
+                .reflection-box {{ background-color: #f4f4f4; padding: 10px; margin: 10px 0 20px 0; border-radius: 3px; word-wrap: break-word; overflow-wrap: break-word; line-height: 1.6; }}
             </style>
         </head>
         <body>
