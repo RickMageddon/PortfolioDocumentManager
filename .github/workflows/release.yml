@@ -28,10 +28,25 @@ jobs:
           pip install -r Release_version/requirements.txt
           pip install pyinstaller
 
-      - name: Build executable with PyInstaller
+      - name: Build Windows executable with PyInstaller
+        if: matrix.os == 'windows-latest'
         run: |
           cd Release_version
           pyinstaller --onefile --windowed --name PortfolioDocumentManager --icon=../icon.ico main.py
+        shell: bash
+
+      - name: Build Linux executable with PyInstaller
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          cd Release_version
+          pyinstaller --onefile --name PortfolioDocumentManager main.py
+        shell: bash
+
+      - name: Build macOS executable with PyInstaller
+        if: matrix.os == 'macos-latest'
+        run: |
+          cd Release_version
+          pyinstaller --onefile --name PortfolioDocumentManager main.py
         shell: bash
 
       - name: Package Windows executable
