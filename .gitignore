@@ -3,6 +3,8 @@ Verantwoordingsdocument_TI_S4.md
 
 # Legacy Tkinter version (replaced by Flet version)
 main.py
+# But allow Release_version/main.py (this is the production version)
+!Release_version/main.py
 
 # Setup/development files (not for end users)
 GITHUB_UPLOAD_INSTRUCTIONS.md

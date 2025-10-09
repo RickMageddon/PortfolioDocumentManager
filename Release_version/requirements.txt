@@ -1,0 +1,10 @@
+# Portfolio Document Manager - Tkinter Version Requirements
+# Python 3.11+
+
+# Markdown to HTML conversion for document generation
+markdown>=3.4.0
+
+# HTML to PDF conversion
+weasyprint>=59.0
+
+# Note: tkinter is included with Python, no separate installation needed
