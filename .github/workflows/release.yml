@@ -37,12 +37,25 @@ jobs:
       - name: Build Windows executable with PyInstaller
         if: matrix.os == 'windows-latest'
         run: |
-          pyinstaller --onefile --windowed --name PortfolioDocumentManager --icon=icon.ico `
+          pyinstaller --onedir --windowed --name PortfolioDocumentManager --icon=icon.ico `
             --hidden-import=weasyprint `
             --collect-all weasyprint `
             --collect-all cairocffi `
             --collect-all cffi `
             Release_version/main.py
+        shell: powershell
+
+      - name: Copy GTK3 DLLs to Windows dist folder
+        if: matrix.os == 'windows-latest'
+        run: |
+          $gtkPath = "C:\Program Files\GTK3-Runtime Win64\bin"
+          $distPath = "dist\PortfolioDocumentManager"
+          if (Test-Path $gtkPath) {
+            Copy-Item "$gtkPath\*.dll" -Destination $distPath -Force
+            Write-Host "GTK3 DLLs copied successfully"
+          } else {
+            Write-Host "GTK3 path not found: $gtkPath"
+          }
         shell: powershell
 
       - name: Build Linux executable with PyInstaller
@@ -60,13 +73,10 @@ jobs:
       - name: Package Windows executable
         if: matrix.os == 'windows-latest'
         run: |
-          mkdir -p package
-          cp dist/PortfolioDocumentManager.exe package/
-          cp README.md package/
-          cp LICENSE package/
-          cd package
-          powershell Compress-Archive -Path PortfolioDocumentManager.exe,README.md,LICENSE -DestinationPath ../PortfolioDocumentManager-windows.zip
-        shell: bash
+          Copy-Item README.md -Destination dist\PortfolioDocumentManager\
+          Copy-Item LICENSE -Destination dist\PortfolioDocumentManager\
+          Compress-Archive -Path dist\PortfolioDocumentManager\* -DestinationPath PortfolioDocumentManager-windows.zip
+        shell: powershell
 
       - name: Package Linux executable
         if: matrix.os == 'ubuntu-latest'
@@ -136,21 +146,20 @@ jobs:
             
             ### 📦 Downloads
             Kies het bestand voor jouw platform:
-            - **Windows**: `PortfolioDocumentManager-windows.zip` - Bevat `PortfolioDocumentManager.exe`
+            - **Windows**: `PortfolioDocumentManager-windows.zip` - Bevat folder met executable + GTK3 libraries
             - **Linux**: `PortfolioDocumentManager-linux.tar.gz` - Bevat executable binary
             - **macOS**: `PortfolioDocumentManager-macos.tar.gz` - Bevat executable binary
             
             ### 🚀 Installatie
             1. Download het bestand voor jouw platform
-            2. Pak het archief uit
-            3. **Windows**: Dubbelklik `PortfolioDocumentManager.exe`
+            2. Pak het archief uit naar een map naar keuze
+            3. **Windows**: Open de `PortfolioDocumentManager` folder en dubbelklik `PortfolioDocumentManager.exe`
             4. **Linux/macOS**: Run `./PortfolioDocumentManager` in de terminal
             
-            ### ⚠️ Windows PDF Generatie
-            Voor PDF generatie op Windows heb je GTK3-Runtime nodig:
-            - Download: [GTK3-Runtime Win64](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases)
-            - Installeer en herstart de applicatie
-            - De app werkt zonder GTK3, maar kan dan geen PDFs genereren
+            ### ✨ Windows - PDF Generatie werkt nu out-of-the-box!
+            - GTK3 libraries zijn nu inbegrepen in de Windows release
+            - Geen aparte GTK3 installatie meer nodig!
+            - Pak simpelweg de zip uit en run de exe - PDF generatie werkt direct
             
             ### ✨ Nieuwe Features
             - 📚 **Dynamische leeruitkomsten per semester**: Semester 2, 3 en 4 ondersteuning

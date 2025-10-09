@@ -4,9 +4,7 @@ Een moderne, cross-platform desktop applicatie voor het beheren van portfolio it
 
 ### Systeem Vereisten
 - **Windows**: Windows 10 of hoger
-  - **⚠️ BELANGRIJK voor .exe gebruikers**: Voor PDF generatie heb je GTK3-Runtime nodig
-  - Download en installeer: [GTK3-Runtime Win64](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases)
-  - Zonder GTK3 kun je de app gebruiken, maar geen PDFs genereren
+  - ✅ **GTK3 libraries zijn inbegrepen in de release** - PDF generatie werkt out-of-the-box!
 - **macOS**: macOS 10.14 of hoger  
 - **Linux**: Ubuntu 18.04+ / vergelijkbare distributies
 
@@ -19,7 +17,7 @@ Een moderne, cross-platform desktop applicatie voor het beheren van portfolio it
 De applicatie gebruikt:
 - **Tkinter**: Voor de betrouwbare cross-platform UI
 - **Markdown**: Voor document conversie
-- **WeasyPrint**: Voor PDF generatie (vereist GTK3 op Windows)
+- **WeasyPrint**: Voor PDF generatie (GTK3 libraries zijn inbegrepen in Windows release)
 - **Andere**: Zie `Release_version/requirements.txt` voor complete lijstdenten van de Hogeschool Utrecht.
 
 ![Platform Support](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
@@ -68,29 +66,20 @@ De applicatie gebruikt:
 1. **Ga naar de [Releases pagina](https://github.com/RickMageddon/portfolio-document-manager/releases)**
 
 2. **Download het archief voor jouw platform:**
-   - **Windows**: `PortfolioDocumentManager-tkinter-windows.zip`
-   - **macOS**: `PortfolioDocumentManager-tkinter-macos.tar.gz`  
-   - **Linux**: `PortfolioDocumentManager-tkinter-linux.tar.gz`
+   - **Windows**: `PortfolioDocumentManager-windows.zip` (bevat executable + alle benodigde libraries)
+   - **macOS**: `PortfolioDocumentManager-macos.tar.gz`  
+   - **Linux**: `PortfolioDocumentManager-linux.tar.gz`
 
-3. **⚠️ Windows gebruikers: Installeer GTK3-Runtime (alleen voor PDF generatie):**
-   - Download: [GTK3-Runtime Win64 Installer](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases)
-   - Installeer de nieuwste versie
-   - Dit is **alleen nodig voor PDF generatie** - de rest van de app werkt zonder GTK3
+3. **Installeer de applicatie:**
+   - Pak het archief uit naar een map naar keuze
+   - **Windows**: GTK3 libraries zijn al inbegrepen! PDF generatie werkt out-of-the-box
+   - Geen extra installaties nodig!
 
-4. **Installeer de applicatie:**
-   - Pak het archief uit
-   - Open een terminal in de uitgepakte map
-   - Installeer dependencies:
-     ```bash
-     pip install -r requirements.txt
-     ```
+4. **Start de applicatie:**
+   - **Windows**: Open de `PortfolioDocumentManager` folder en dubbelklik `PortfolioDocumentManager.exe`
+   - **macOS/Linux**: Run `./PortfolioDocumentManager` in de terminal (vanuit de uitgepakte folder)
 
-5. **Start de applicatie:**
-   ```bash
-   python Release_version/main.py
-   ```
-
-6. **Eerste keer opstarten:**
+5. **Eerste keer opstarten:**
    - Vul je studentgegevens in (inclusief semester)
    - Begin met het toevoegen van portfolio items
    - Vraag feedback en genereer je document!
