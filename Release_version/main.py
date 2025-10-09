@@ -1631,43 +1631,8 @@ class PortfolioItemDialog:
         self.setup_dialog(existing_item)
 
     def setup_dialog(self, existing_item):
-        # Create main canvas and scrollbar for scrollable content
-        canvas = tk.Canvas(self.dialog)
-        scrollbar = ttk.Scrollbar(self.dialog, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-        
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        # Add mouse wheel scrolling
-        def _on_mousewheel(event):
-            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-
-        # Bind mousewheel only while the cursor is over the canvas to avoid
-        # the callback referencing a destroyed canvas when the dialog closes.
-        def _bind_mousewheel(event):
-            canvas.bind_all("<MouseWheel>", _on_mousewheel)
-
-        def _unbind_mousewheel(event):
-            try:
-                canvas.unbind_all("<MouseWheel>")
-            except Exception:
-                pass
-
-        canvas.bind("<Enter>", _bind_mousewheel)
-        canvas.bind("<Leave>", _unbind_mousewheel)
-        
-        # Pack canvas and scrollbar
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Main content frame
-        main_frame = ttk.Frame(scrollable_frame, padding="20")
+        # Main content frame with padding
+        main_frame = ttk.Frame(self.dialog, padding="20")
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Title field
