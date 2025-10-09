@@ -73,8 +73,10 @@ jobs:
       - name: Package Windows executable
         if: matrix.os == 'windows-latest'
         run: |
-          Copy-Item README.md -Destination dist\PortfolioDocumentManager\
+          Copy-Item RELEASE_README.md -Destination dist\PortfolioDocumentManager\README.md
           Copy-Item LICENSE -Destination dist\PortfolioDocumentManager\
+          Copy-Item Release_version\main.py -Destination dist\PortfolioDocumentManager\
+          Copy-Item Release_version\requirements.txt -Destination dist\PortfolioDocumentManager\
           Compress-Archive -Path dist\PortfolioDocumentManager\* -DestinationPath PortfolioDocumentManager-windows.zip
         shell: powershell
 
@@ -151,15 +153,24 @@ jobs:
             - **macOS**: `PortfolioDocumentManager-macos.tar.gz` - Bevat executable binary
             
             ### 🚀 Installatie
+            
+            #### Option 1: Executable (Aanbevolen)
             1. Download het bestand voor jouw platform
             2. Pak het archief uit naar een map naar keuze
             3. **Windows**: Open de `PortfolioDocumentManager` folder en dubbelklik `PortfolioDocumentManager.exe`
             4. **Linux/macOS**: Run `./PortfolioDocumentManager` in de terminal
             
+            #### Option 2: Python Fallback (Als exe niet werkt)
+            1. Installeer Python 3.11 of hoger
+            2. Open terminal in de `PortfolioDocumentManager` folder
+            3. Run: `pip install -r requirements.txt`
+            4. Run: `python main.py`
+            
             ### ✨ Windows - PDF Generatie werkt nu out-of-the-box!
-            - GTK3 libraries zijn nu inbegrepen in de Windows release
+            - GTK3 libraries zijn direct naast de .exe geplaatst
             - Geen aparte GTK3 installatie meer nodig!
             - Pak simpelweg de zip uit en run de exe - PDF generatie werkt direct
+            - **Bevat ook main.py** als backup voor als de .exe problemen geeft
             
             ### ✨ Nieuwe Features
             - 📚 **Dynamische leeruitkomsten per semester**: Semester 2, 3 en 4 ondersteuning

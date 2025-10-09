@@ -927,18 +927,20 @@ class PortfolioManager:
         """Generate PDF from markdown using weasyprint"""
         # Add GTK3 bin folder to PATH for Windows
         if sys.platform == 'win32':
-            # Mogelijke GTK3 locaties
+            # Mogelijke GTK3 locaties (in volgorde van prioriteit)
             gtk_paths = [
-                r"C:\Program Files\GTK3-Runtime Win64\bin",
-                os.path.join(os.path.dirname(sys.executable), "gtk-runtime", "bin"),  # Voor bundled versie
+                os.path.dirname(sys.executable),  # Dezelfde folder als de .exe (BESTE OPTIE!)
+                os.path.join(os.path.dirname(sys.executable), "gtk-runtime", "bin"),  # Voor bundled versie in subfolder
+                os.path.dirname(os.path.abspath(__file__)),  # Dezelfde folder als het script
                 os.path.join(os.path.dirname(os.path.abspath(__file__)), "gtk-runtime", "bin"),  # Relatief aan script
+                r"C:\Program Files\GTK3-Runtime Win64\bin",  # Systeeminstallatie
             ]
             
-            # Voeg bestaande GTK3 paths toe aan PATH
+            # Voeg ALLE bestaande GTK3 paths toe aan PATH (niet alleen de eerste)
             for gtk_path in gtk_paths:
-                if os.path.exists(gtk_path):
+                if os.path.exists(gtk_path) and gtk_path not in os.environ.get('PATH', ''):
                     os.environ['PATH'] = gtk_path + os.pathsep + os.environ.get('PATH', '')
-                    break
+                    print(f"DEBUG: Added to PATH: {gtk_path}")  # Debug info
         
         try:
             import weasyprint
