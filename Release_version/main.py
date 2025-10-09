@@ -194,9 +194,6 @@ class PortfolioManager:
         # Directe knop Leeruitkomsten Info
         menubar.add_command(label="Leeruitkomsten Info", command=self.show_learning_outcomes_info)
 
-        # Instellingen menu
-        menubar.add_command(label="Instellingen", command=self.show_settings)
-
         self.root.config(menu=menubar)
 
         main_frame = ttk.Frame(self.root, padding="10")
@@ -295,6 +292,45 @@ class PortfolioManager:
                 item.get('date_added', ''),
                 f"({feedback_count})"
             ))
+        
+        # Update attention label with feedback status per learning outcome
+        self.update_feedback_attention()
+
+    def update_feedback_attention(self):
+        """Update the attention label with feedback status per learning outcome"""
+        # Track feedback per learning outcome
+        learning_outcome_feedback = {}
+        
+        # Collect all learning outcomes from all items and their feedback
+        for item in self.portfolio_items:
+            for lo in item.get('learning_outcomes', []):
+                if lo not in learning_outcome_feedback:
+                    learning_outcome_feedback[lo] = {'total_items': 0, 'with_feedback': 0}
+                learning_outcome_feedback[lo]['total_items'] += 1
+                if item.get('feedback', []):
+                    learning_outcome_feedback[lo]['with_feedback'] += 1
+        
+        if not learning_outcome_feedback:
+            self.attention_label.config(text="Nog geen portfolio items toegevoegd.")
+            return
+        
+        # Build feedback status messages per learning outcome
+        messages = []
+        for lo in sorted(learning_outcome_feedback.keys()):
+            data = learning_outcome_feedback[lo]
+            total = data['total_items']
+            with_fb = data['with_feedback']
+            missing = total - with_fb
+            
+            if missing > 0:
+                messages.append(f"LU{lo}: {missing} item(s) zonder feedback")
+            elif total > 0:
+                messages.append(f"LU{lo}: ✓ Alle feedback compleet")
+        
+        if messages:
+            self.attention_label.config(text=" | ".join(messages))
+        else:
+            self.attention_label.config(text="Geen portfolio items met leeruitkomsten.")
 
     def first_time_setup(self):
         """First time setup dialog"""
