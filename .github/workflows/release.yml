@@ -26,30 +26,48 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r Release_version/requirements.txt
+          pip install pyinstaller
 
-      - name: Package app (Tkinter version)
+      - name: Build executable with PyInstaller
         run: |
-          mkdir dist
-          cp -r Release_version dist/Release_version
-          cp Release_version/requirements.txt dist/
-          cp README.md dist/
-          cp LICENSE dist/
-          cd dist
-          if [ "$RUNNER_OS" == "Linux" ]; then
-            tar -czvf PortfolioDocumentManager-tkinter-linux.tar.gz Release_version requirements.txt README.md LICENSE
-          elif [ "$RUNNER_OS" == "macOS" ]; then
-            tar -czvf PortfolioDocumentManager-tkinter-macos.tar.gz Release_version requirements.txt README.md LICENSE
-          else
-            powershell Compress-Archive -Path Release_version,requirements.txt,README.md,LICENSE -DestinationPath PortfolioDocumentManager-tkinter-windows.zip
-          fi
+          cd Release_version
+          pyinstaller --onefile --windowed --name PortfolioDocumentManager --icon=../icon.ico main.py
         shell: bash
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: PortfolioDocumentManager-${{ matrix.os }}
-          path: dist/*.tar.gz
-          if-no-files-found: ignore
+      - name: Package Windows executable
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir -p dist/package
+          cp Release_version/dist/PortfolioDocumentManager.exe dist/package/
+          cp README.md dist/package/
+          cp LICENSE dist/package/
+          cd dist/package
+          powershell Compress-Archive -Path PortfolioDocumentManager.exe,README.md,LICENSE -DestinationPath ../PortfolioDocumentManager-windows.zip
+        shell: bash
+
+      - name: Package Linux executable
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          mkdir -p dist/package
+          cp Release_version/dist/PortfolioDocumentManager dist/package/
+          chmod +x dist/package/PortfolioDocumentManager
+          cp README.md dist/package/
+          cp LICENSE dist/package/
+          cd dist/package
+          tar -czvf ../PortfolioDocumentManager-linux.tar.gz PortfolioDocumentManager README.md LICENSE
+        shell: bash
+
+      - name: Package macOS executable
+        if: matrix.os == 'macos-latest'
+        run: |
+          mkdir -p dist/package
+          cp Release_version/dist/PortfolioDocumentManager dist/package/
+          chmod +x dist/package/PortfolioDocumentManager
+          cp README.md dist/package/
+          cp LICENSE dist/package/
+          cd dist/package
+          tar -czvf ../PortfolioDocumentManager-macos.tar.gz PortfolioDocumentManager README.md LICENSE
+        shell: bash
 
       - name: Upload Windows artifact
         if: matrix.os == 'windows-latest'
@@ -57,7 +75,20 @@ jobs:
         with:
           name: PortfolioDocumentManager-windows
           path: dist/*.zip
-          if-no-files-found: ignore
+
+      - name: Upload Linux artifact
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PortfolioDocumentManager-linux
+          path: dist/*.tar.gz
+
+      - name: Upload macOS artifact
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: PortfolioDocumentManager-macos
+          path: dist/*.tar.gz
 
   release:
     name: Create GitHub Release
@@ -78,31 +109,31 @@ jobs:
           body: |
             ## 🎉 Versie 2.0 - Back to the Roots (Tkinter)
             
-            **Terug naar de basis met Tkinter!** Deze versie gebruikt de betrouwbare en stabiele Tkinter GUI.
+            **Standalone executables!** Geen Python installatie meer nodig - download en run!
             
             ### 📦 Downloads
             Kies het bestand voor jouw platform:
-            - **Windows**: `PortfolioDocumentManager-tkinter-windows.zip`
-            - **macOS**: `PortfolioDocumentManager-tkinter-macos.tar.gz`
-            - **Linux**: `PortfolioDocumentManager-tkinter-linux.tar.gz`
+            - **Windows**: `PortfolioDocumentManager-windows.zip` - Bevat `PortfolioDocumentManager.exe`
+            - **Linux**: `PortfolioDocumentManager-linux.tar.gz` - Bevat executable binary
+            - **macOS**: `PortfolioDocumentManager-macos.tar.gz` - Bevat executable binary
             
             ### 🚀 Installatie
             1. Download het bestand voor jouw platform
             2. Pak het archief uit
-            3. Installeer dependencies: `pip install -r requirements.txt`
-            4. Start de app: `python Release_version/main.py`
+            3. **Windows**: Dubbelklik `PortfolioDocumentManager.exe`
+            4. **Linux/macOS**: Run `./PortfolioDocumentManager` in de terminal
             
             ### ✨ Nieuwe Features
             - 📚 **Dynamische leeruitkomsten per semester**: Semester 2, 3 en 4 ondersteuning
             - ⚙️ **Instellingenmenu**: Kies je semester via Instellingen
             - 🎯 **Correcte leeruitkomsten**: Krijg altijd de juiste leeruitkomsten voor je semester
             - 🔄 **Verbeterde stabiliteit**: Robuuste tkinter-based UI
+            - 🚀 **Standalone executable**: Geen Python installatie nodig!
             
             ### 📝 Let op
             - De Flet-versie is on hold / gestopt voor nu
             - Deze Tkinter-versie is de aanbevolen en ondersteunde versie
-            
-            Inclusief requirements.txt - Direct te gebruiken na uitpakken en dependencies installeren!
+            - Alle dependencies zijn ingebouwd in de executable
           files: ./artifacts/**/*
           fail_on_unmatched_files: false
         env:
