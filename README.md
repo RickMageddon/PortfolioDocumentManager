@@ -221,12 +221,11 @@ Dit project is gelicentieerd onder de MIT License - zie het [LICENSE](LICENSE) b
 
 ## 🙏 Dankbetuigingen
 
-- Hogeschool Utrecht voor de template specificaties
 - TI docenten voor feedback en requirements
 - Alle studenten die de applicatie testen en feedback geven
 
 ---
 
-**Gemaakt met ❤️ voor HU Technische Informatica studenten**
+**Gemaakt met ❤️ voor HU studenten**
 
 *Versie 2.0 - Back to the Roots - Powered by Tkinter - Ontwikkeld door Rick van der Voort*
