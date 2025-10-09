@@ -3,19 +3,22 @@
 Een moderne, cross-platform desktop applicatie voor het beheren van portfolio items en het genereren van verantwoordingsdocumenten voor Technische Informatica studenten van de Hogeschool Utrecht.
 
 ![Platform Support](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
-![Python Version](https://img.shields.io/badge/python-3.8%2B-blue)
+![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Version](https://img.shields.io/badge/version-1.5.15-brightgreen)
+![Version](https://img.shields.io/badge/version-2.0-brightgreen)
 ![Visitors](https://visitor-badge.laobi.icu/badge?page_id=RickMageddon.PortfolioDocumentManager)
+
+> **⚠️ Belangrijke opmerking**: De Flet-versie is **on hold / gestopt**. De **Tkinter-versie** (in `Release_version/`) is nu de **aanbevolen en actief ondersteunde versie**.
 
 
 ## ✨ Features
 
 ### 📋 Portfolio Beheer
 - **Portfolio Items Toevoegen**: Voeg eenvoudig nieuwe portfolio items toe met titel, beschrijving en GitHub links
-- **Leeruitkomsten Selectie**: Kies uit 9 voorgedefinieerde leeruitkomsten met tooltips en voorbeelden
+- **Leeruitkomsten Selectie**: Kies uit 9 leeruitkomsten per semester met beschrijvingen
 - **Type Onderscheid**: Onderscheid tussen persoonlijke opdrachten en groepswerk
 - **Groepsbeheer**: Beheer groepsleden voor groepsopdrachten
+- **Semester Ondersteuning**: Dynamische leeruitkomsten voor Semester 2, 3 en 4
 
 ### 💬 Feedback Systeem
 - **Feedback Toevoegen**: Voeg feedback toe van docenten, experts en medestudenten
@@ -30,12 +33,11 @@ Een moderne, cross-platform desktop applicatie voor het beheren van portfolio it
 - **Template Gebaseerd**: Gebaseerd op officiële HU TI templates
 
 ### 🎯 Gebruikersvriendelijk
-- **Moderne Interface**: Prachtige GUI gebouwd met Flet (Flutter-gebaseerd framework)
-- **Cross-platform Native Look**: Ziet er native uit op elk platform
-- **Responsive Design**: Interface past zich aan verschillende schermgroottes aan
+- **Betrouwbare Interface**: Stabiele GUI gebouwd met Tkinter
+- **Cross-platform**: Werkt naadloos op Windows, macOS en Linux
 - **Data Persistentie**: Automatisch opslaan in JSON formaat
 - **Import/Export**: Backup en herstel functionaliteit
-- **Cross-platform**: Werkt naadloos op Windows, macOS en Linux
+- **Instellingenmenu**: Eenvoudig je semester wijzigen
 
 ## 🚀 Quick Start
 
@@ -45,23 +47,26 @@ Een moderne, cross-platform desktop applicatie voor het beheren van portfolio it
 
 1. **Ga naar de [Releases pagina](https://github.com/RickMageddon/portfolio-document-manager/releases)**
 
-2. **Download de executable voor jouw platform:**
-   - **Windows**: `PortfolioManager-v1.5.0-windows-x64.exe`
-   - **macOS**: `PortfolioManager-v1.5.0-macos-x64`  
-   - **Linux**: `PortfolioManager-v1.5.0-linux-x64`
-   
-   ⚠️ **Let op**: Download de executable bestanden, niet de "Source code" ZIP/TAR.GZ files (die zijn voor developers)
+2. **Download het archief voor jouw platform:**
+   - **Windows**: `PortfolioDocumentManager-tkinter-windows.zip`
+   - **macOS**: `PortfolioDocumentManager-tkinter-macos.tar.gz`  
+   - **Linux**: `PortfolioDocumentManager-tkinter-linux.tar.gz`
 
-3. **Start de applicatie:**
-   - **Windows**: Dubbelklik op het .exe bestand
-   - **macOS/Linux**: Maak executable en run via terminal:
+3. **Installeer de applicatie:**
+   - Pak het archief uit
+   - Open een terminal in de uitgepakte map
+   - Installeer dependencies:
      ```bash
-     chmod +x PortfolioManager-v1.5.0-*
-     ./PortfolioManager-v1.5.0-*
+     pip install -r requirements.txt
      ```
 
-4. **Eerste keer opstarten:**
-   - Vul je studentgegevens in
+4. **Start de applicatie:**
+   ```bash
+   python Release_version/main.py
+   ```
+
+5. **Eerste keer opstarten:**
+   - Vul je studentgegevens in (inclusief semester)
    - Begin met het toevoegen van portfolio items
    - Vraag feedback en genereer je document!
 
@@ -75,33 +80,37 @@ Een moderne, cross-platform desktop applicatie voor het beheren van portfolio it
 
 2. **Installeer dependencies:**
    ```bash
-   pip install -r requirements.txt
+   pip install -r Release_version/requirements.txt
    ```
 
 3. **Start de applicatie:**
    ```bash
-   python main_flet.py
+   python Release_version/main.py
    ```
 
-## 🆕 Nieuw in v1.5.0
+## 🆕 Nieuw in v2.0 - Back to the Roots
 
-### 🎨 Complete UI Overhaul met Flet
-- **Migratie naar Flet**: Volledig herontworpen met Google's Flutter-gebaseerde Flet framework
-- **Moderne Look**: Prachtige Material Design interface
-- **Native Performance**: Betere prestaties en responsiviteit
-- **Cross-platform Consistency**: Identieke ervaring op alle platforms
+### 🔄 Terug naar Tkinter
+- **Betrouwbare Basis**: Terug naar de stabiele en beproefde Tkinter GUI
+- **Flet on Hold**: De Flet-versie is gestopt voor nu, focus op stabiliteit
+- **Production Ready**: Volledig geteste en betrouwbare interface
 
-### ✨ Nieuwe Features
-- **Verbeterde Gebruikersinterface**: Intuïtievere navigatie en cleaner design
-- **Enhanced Data Management**: Verbeterde data persistentie en error handling
-- **Better Feedback System**: Geoptimaliseerde feedback workflows
-- **Improved Build System**: Automatische builds voor alle platforms via GitHub Actions
+### 📚 Dynamische Leeruitkomsten per Semester
+- **Semester 2 Ondersteuning**: Volledige leeruitkomsten voor semester 2
+- **Semester 3 Ondersteuning**: Volledige leeruitkomsten voor semester 3
+- **Semester 4 Ondersteuning**: Volledige leeruitkomsten voor semester 4
+- **Automatische Selectie**: Kies je semester en krijg automatisch de juiste leeruitkomsten
 
-### 🔧 Technische Verbeteringen
-- **Moderne Tech Stack**: Van Tkinter naar Flet voor toekomstbestendigheid
-- **Better Code Structure**: Gerefactorde codebase voor onderhoudbaarheid
-- **Enhanced Error Handling**: Robuustere foutafhandeling
-- **Automated Releases**: Volledig geautomatiseerde build en release pipeline
+### ⚙️ Instellingenmenu
+- **Semester Selectie**: Wijzig je semester via het nieuwe Instellingen menu
+- **Direct Effect**: Leeruitkomsten worden direct bijgewerkt na wijziging
+- **Persistent**: Je semesterkeuze wordt opgeslagen
+
+### ✨ Verbeteringen
+- **Verbeterde Stabiliteit**: Robuuste tkinter-based interface
+- **Better Error Handling**: Uitgebreide foutafhandeling
+- **Enhanced UI**: Geoptimaliseerde gebruikersinterface
+- **Automated Releases**: Volledig geautomatiseerde build en release pipeline voor alle platforms
 
 ## 📖 Gebruikshandleiding
 
@@ -152,17 +161,21 @@ python build.py
 ### Project Structuur
 ```
 portfolio-document-manager/
-├── main_flet.py              # Hoofd applicatie (Flet UI)
-├── requirements.txt          # Python dependencies
-├── build.py                 # Build script voor executables
-├── .gitignore              # Git ignore regels
+├── Release_version/         # Actieve Tkinter versie (v2.0)
+│   ├── main.py             # Hoofd applicatie
+│   ├── requirements.txt    # Python dependencies
+│   └── ...                 # Overige bestanden
+├── Legacy/                 # Oude versie (v1.0)
+├── main_flet.py            # Flet versie (ON HOLD)
 ├── README.md               # Deze documentatie
-├── .github/workflows/      # GitHub Actions CI/CD
-└── release/                # Gegenereerde executables
+├── CHANGELOG.md            # Versie geschiedenis
+└── .github/workflows/      # GitHub Actions CI/CD
 ```
 
-### Legacy Files
-- `main.py`: Oude Tkinter versie (deprecated vanaf v1.5.0)
+### Versie Informatie
+- **Actief**: `Release_version/` - Tkinter versie 2.0 (aanbevolen)
+- **On Hold**: `main_flet.py` - Flet versie (gestopt)
+- **Legacy**: `Legacy/` - Oude Tkinter versie 1.0
 
 ## 📋 Vereisten
 
@@ -172,15 +185,16 @@ portfolio-document-manager/
 - **Linux**: Ubuntu 18.04+ / vergelijkbare distributies
 
 ### Voor Development
-- Python 3.8 of hoger
-- Flet framework voor UI (automatisch geïnstalleerd via requirements.txt)
-- Zie `requirements.txt` voor alle dependencies
+- Python 3.11 of hoger
+- Tkinter (meestal pre-installed met Python)
+- Zie `Release_version/requirements.txt` voor alle dependencies
 
 ### Dependencies
 De applicatie gebruikt:
-- **Flet**: Voor de moderne cross-platform UI
-- **PyInstaller**: Voor het bouwen van executables
-- **Andere**: Zie `requirements.txt` voor complete lijst
+- **Tkinter**: Voor de betrouwbare cross-platform UI
+- **Markdown**: Voor document conversie
+- **WeasyPrint**: Voor PDF generatie
+- **Andere**: Zie `Release_version/requirements.txt` voor complete lijst
 
 
 ## 🤝 Bijdragen
@@ -215,4 +229,4 @@ Dit project is gelicentieerd onder de MIT License - zie het [LICENSE](LICENSE) b
 
 **Gemaakt met ❤️ voor HU Technische Informatica studenten**
 
-*Versie 1.5.0 - Powered by Flet - Ontwikkeld door Rick van der Voort*
+*Versie 2.0 - Back to the Roots - Powered by Tkinter - Ontwikkeld door Rick van der Voort*

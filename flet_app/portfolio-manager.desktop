@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Portfolio Document Manager
+Comment=Een moderne desktop applicatie voor het beheren van portfolio documenten
+GenericName=Portfolio Manager
+Icon=/home/rick/Documents/Code/PortfolioDocumentManager/icon.png
+Exec=/home/rick/.local/bin/portfolio-manager
+Terminal=false
+Categories=Office;Education;
+StartupNotify=true
+StartupWMClass=PortfolioManager
+Keywords=portfolio;document;manager;education;
+MimeType=application/json;
