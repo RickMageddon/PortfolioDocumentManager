@@ -63,15 +63,17 @@ jobs:
     name: Create GitHub Release
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./artifacts
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+      
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0
           name: "v2.0 - Back to the roots (Tkinter)"
           body: |
             ## 🎉 Versie 2.0 - Back to the Roots (Tkinter)
@@ -101,11 +103,7 @@ jobs:
             - Deze Tkinter-versie is de aanbevolen en ondersteunde versie
             
             Inclusief requirements.txt - Direct te gebruiken na uitpakken en dependencies installeren!
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload release assets
-        uses: softprops/action-gh-release@v1
-        with:
           files: ./artifacts/**/*
+          fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
