@@ -28,11 +28,22 @@ jobs:
           pip install -r Release_version/requirements.txt
           pip install pyinstaller
 
+      - name: Install GTK3 dependencies (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          choco install gtk-runtime -y
+        shell: powershell
+
       - name: Build Windows executable with PyInstaller
         if: matrix.os == 'windows-latest'
         run: |
-          pyinstaller --onefile --windowed --name PortfolioDocumentManager --icon=icon.ico Release_version/main.py
-        shell: bash
+          pyinstaller --onefile --windowed --name PortfolioDocumentManager --icon=icon.ico `
+            --hidden-import=weasyprint `
+            --collect-all weasyprint `
+            --collect-all cairocffi `
+            --collect-all cffi `
+            Release_version/main.py
+        shell: powershell
 
       - name: Build Linux executable with PyInstaller
         if: matrix.os == 'ubuntu-latest'
@@ -134,6 +145,12 @@ jobs:
             2. Pak het archief uit
             3. **Windows**: Dubbelklik `PortfolioDocumentManager.exe`
             4. **Linux/macOS**: Run `./PortfolioDocumentManager` in de terminal
+            
+            ### ⚠️ Windows PDF Generatie
+            Voor PDF generatie op Windows heb je GTK3-Runtime nodig:
+            - Download: [GTK3-Runtime Win64](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases)
+            - Installeer en herstart de applicatie
+            - De app werkt zonder GTK3, maar kan dan geen PDFs genereren
             
             ### ✨ Nieuwe Features
             - 📚 **Dynamische leeruitkomsten per semester**: Semester 2, 3 en 4 ondersteuning
