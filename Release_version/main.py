@@ -297,40 +297,37 @@ class PortfolioManager:
         self.update_feedback_attention()
 
     def update_feedback_attention(self):
-        """Update the attention label with feedback status per learning outcome"""
-        # Track feedback per learning outcome
-        learning_outcome_feedback = {}
-        
-        # Collect all learning outcomes from all items and their feedback
-        for item in self.portfolio_items:
-            for lo in item.get('learning_outcomes', []):
-                if lo not in learning_outcome_feedback:
-                    learning_outcome_feedback[lo] = {'total_items': 0, 'with_feedback': 0}
-                learning_outcome_feedback[lo]['total_items'] += 1
-                if item.get('feedback', []):
-                    learning_outcome_feedback[lo]['with_feedback'] += 1
-        
-        if not learning_outcome_feedback:
-            self.attention_label.config(text="Nog geen portfolio items toegevoegd.")
+        """Update the attention label with total feedback needed"""
+        if not self.portfolio_items:
+            self.attention_label.config(text="Nog geen portfolio items toegevoegd.", foreground="red")
             return
         
-        # Build feedback status messages per learning outcome
-        messages = []
-        for lo in sorted(learning_outcome_feedback.keys()):
-            data = learning_outcome_feedback[lo]
-            total = data['total_items']
-            with_fb = data['with_feedback']
-            missing = total - with_fb
-            
-            if missing > 0:
-                messages.append(f"LU{lo}: {missing} item(s) zonder feedback")
-            elif total > 0:
-                messages.append(f"LU{lo}: ✓ Alle feedback compleet")
+        # Count total items that need feedback
+        items_without_feedback = 0
+        total_items = 0
         
-        if messages:
-            self.attention_label.config(text=" | ".join(messages))
+        for item in self.portfolio_items:
+            # Only count items that have learning outcomes assigned
+            if item.get('learning_outcomes', []):
+                total_items += 1
+                if not item.get('feedback', []):
+                    items_without_feedback += 1
+        
+        if total_items == 0:
+            self.attention_label.config(text="Geen portfolio items met leeruitkomsten.", foreground="red")
+            return
+        
+        # Show status
+        if items_without_feedback == 0:
+            self.attention_label.config(
+                text="✓ Alle portfolio items hebben feedback!", 
+                foreground="green"
+            )
         else:
-            self.attention_label.config(text="Geen portfolio items met leeruitkomsten.")
+            self.attention_label.config(
+                text=f"{items_without_feedback} portfolio item(s) hebben nog geen feedback nodig", 
+                foreground="red"
+            )
 
     def first_time_setup(self):
         """First time setup dialog"""
