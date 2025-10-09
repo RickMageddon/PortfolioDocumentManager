@@ -31,56 +31,53 @@ jobs:
       - name: Build Windows executable with PyInstaller
         if: matrix.os == 'windows-latest'
         run: |
-          cd Release_version
-          pyinstaller --onefile --windowed --name PortfolioDocumentManager --icon=../icon.ico main.py
+          pyinstaller --onefile --windowed --name PortfolioDocumentManager --icon=icon.ico Release_version/main.py
         shell: bash
 
       - name: Build Linux executable with PyInstaller
         if: matrix.os == 'ubuntu-latest'
         run: |
-          cd Release_version
-          pyinstaller --onefile --name PortfolioDocumentManager main.py
+          pyinstaller --onefile --name PortfolioDocumentManager Release_version/main.py
         shell: bash
 
       - name: Build macOS executable with PyInstaller
         if: matrix.os == 'macos-latest'
         run: |
-          cd Release_version
-          pyinstaller --onefile --name PortfolioDocumentManager main.py
+          pyinstaller --onefile --name PortfolioDocumentManager Release_version/main.py
         shell: bash
 
       - name: Package Windows executable
         if: matrix.os == 'windows-latest'
         run: |
-          mkdir -p dist/package
-          cp Release_version/dist/PortfolioDocumentManager.exe dist/package/
-          cp README.md dist/package/
-          cp LICENSE dist/package/
-          cd dist/package
+          mkdir -p package
+          cp dist/PortfolioDocumentManager.exe package/
+          cp README.md package/
+          cp LICENSE package/
+          cd package
           powershell Compress-Archive -Path PortfolioDocumentManager.exe,README.md,LICENSE -DestinationPath ../PortfolioDocumentManager-windows.zip
         shell: bash
 
       - name: Package Linux executable
         if: matrix.os == 'ubuntu-latest'
         run: |
-          mkdir -p dist/package
-          cp Release_version/dist/PortfolioDocumentManager dist/package/
-          chmod +x dist/package/PortfolioDocumentManager
-          cp README.md dist/package/
-          cp LICENSE dist/package/
-          cd dist/package
+          mkdir -p package
+          cp dist/PortfolioDocumentManager package/
+          chmod +x package/PortfolioDocumentManager
+          cp README.md package/
+          cp LICENSE package/
+          cd package
           tar -czvf ../PortfolioDocumentManager-linux.tar.gz PortfolioDocumentManager README.md LICENSE
         shell: bash
 
       - name: Package macOS executable
         if: matrix.os == 'macos-latest'
         run: |
-          mkdir -p dist/package
-          cp Release_version/dist/PortfolioDocumentManager dist/package/
-          chmod +x dist/package/PortfolioDocumentManager
-          cp README.md dist/package/
-          cp LICENSE dist/package/
-          cd dist/package
+          mkdir -p package
+          cp dist/PortfolioDocumentManager package/
+          chmod +x package/PortfolioDocumentManager
+          cp README.md package/
+          cp LICENSE package/
+          cd package
           tar -czvf ../PortfolioDocumentManager-macos.tar.gz PortfolioDocumentManager README.md LICENSE
         shell: bash
 
@@ -89,21 +86,21 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PortfolioDocumentManager-windows
-          path: dist/*.zip
+          path: PortfolioDocumentManager-windows.zip
 
       - name: Upload Linux artifact
         if: matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v4
         with:
           name: PortfolioDocumentManager-linux
-          path: dist/*.tar.gz
+          path: PortfolioDocumentManager-linux.tar.gz
 
       - name: Upload macOS artifact
         if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
           name: PortfolioDocumentManager-macos
-          path: dist/*.tar.gz
+          path: PortfolioDocumentManager-macos.tar.gz
 
   release:
     name: Create GitHub Release
