@@ -691,45 +691,82 @@ class PortfolioManager:
             self.reflection_data = dialog.result
             self.save_data()
             
-            # Generate markdown document
-            markdown_content = self.generate_markdown_document()
+            # Create progress window
+            progress_window = tk.Toplevel(self.root)
+            progress_window.title("Document Genereren")
+            progress_window.geometry("400x150")
+            progress_window.transient(self.root)
+            progress_window.grab_set()
+            progress_window.resizable(False, False)
             
-            # Save markdown file temporarily for PDF generation
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            temp_markdown_filename = f"temp_verantwoordingsdocument_{timestamp}.md"
+            # Center the window
+            progress_window.geometry("+%d+%d" % (self.root.winfo_rootx() + 200, self.root.winfo_rooty() + 200))
             
-            with open(temp_markdown_filename, 'w', encoding='utf-8') as f:
-                f.write(markdown_content)
+            frame = ttk.Frame(progress_window, padding="20")
+            frame.pack(fill=tk.BOTH, expand=True)
             
-            generated_files = []
+            status_label = ttk.Label(frame, text="Document genereren...", font=("Arial", 11))
+            status_label.pack(pady=(0, 15))
             
-            # Generate PDF (always)
+            progress_bar = ttk.Progressbar(frame, mode='indeterminate', length=350)
+            progress_bar.pack(pady=(0, 10))
+            progress_bar.start(10)
+            
+            # Force window to update
+            progress_window.update()
+            
             try:
+                # Generate markdown document
+                status_label.config(text="Markdown document genereren...")
+                progress_window.update()
+                markdown_content = self.generate_markdown_document()
+                
+                # Save markdown file temporarily for PDF generation
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                temp_markdown_filename = f"temp_verantwoordingsdocument_{timestamp}.md"
+                
+                status_label.config(text="Markdown bestand opslaan...")
+                progress_window.update()
+                
+                with open(temp_markdown_filename, 'w', encoding='utf-8') as f:
+                    f.write(markdown_content)
+                
+                generated_files = []
+                
+                # Generate PDF (always)
+                status_label.config(text="PDF genereren... (dit kan even duren)")
+                progress_window.update()
+                
                 self.generate_pdf(temp_markdown_filename)
                 pdf_filename = temp_markdown_filename.replace('.md', '.pdf')
                 final_pdf_filename = f"Verantwoordingsdocument_{self.student_info.get('name', 'Student')}_{timestamp}.pdf"
                 os.rename(pdf_filename, final_pdf_filename)
                 generated_files.append(f"PDF: {final_pdf_filename}")
+                
+                # Generate markdown file if requested
+                if dialog.result.get('generate_markdown', False):
+                    final_markdown_filename = f"Verantwoordingsdocument_{self.student_info.get('name', 'Student')}_{timestamp}.md"
+                    os.rename(temp_markdown_filename, final_markdown_filename)
+                    generated_files.append(f"Markdown: {final_markdown_filename}")
+                else:
+                    # Remove temp markdown file if not needed
+                    if os.path.exists(temp_markdown_filename):
+                        os.remove(temp_markdown_filename)
+                
+                # Close progress window
+                progress_window.destroy()
+                
+                # Show success message
+                files_text = "\n".join(generated_files)
+                messagebox.showinfo("Succes", f"Document succesvol gegenereerd!\n\n{files_text}")
+                
             except Exception as e:
+                progress_window.destroy()
                 messagebox.showerror("PDF Generatie", f"PDF generatie is mislukt: {str(e)}")
                 # Clean up temp file
                 if os.path.exists(temp_markdown_filename):
                     os.remove(temp_markdown_filename)
                 return
-            
-            # Generate markdown file if requested
-            if dialog.result.get('generate_markdown', False):
-                final_markdown_filename = f"Verantwoordingsdocument_{self.student_info.get('name', 'Student')}_{timestamp}.md"
-                os.rename(temp_markdown_filename, final_markdown_filename)
-                generated_files.append(f"Markdown: {final_markdown_filename}")
-            else:
-                # Remove temp markdown file if not needed
-                if os.path.exists(temp_markdown_filename):
-                    os.remove(temp_markdown_filename)
-            
-            # Show success message
-            files_text = "\n".join(generated_files)
-            messagebox.showinfo("Succes", f"Document succesvol gegenereerd!\n\n{files_text}")
 
             # Vraag de gebruiker of we automatisch naar het volgende peilmoment moeten
             try:
@@ -801,13 +838,17 @@ class PortfolioManager:
             lo = self.learning_outcomes[lo_num]
             content.append(f"### Leeruitkomst {lo_num} {lo['title']}\n")
             content.append(f"*{lo['description']}*\n")
-            content.append("")  # Empty line between description and indicators
-            content.append("**Indicatoren:**")
-            content.append("")  # Empty line after "Indicatoren:"
-            content.append('<ul class="indicators-list">')
-            for indicator in lo['indicators']:
-                content.append(f"<li>{indicator}</li>")
-            content.append("</ul>")
+            
+            # Only add indicators if they exist and are not empty
+            if lo.get('indicators') and len(lo['indicators']) > 0:
+                content.append("")  # Empty line between description and indicators
+                content.append("**Indicatoren:**")
+                content.append("")  # Empty line after "Indicatoren:"
+                content.append('<ul class="indicators-list">')
+                for indicator in lo['indicators']:
+                    content.append(f"<li>{indicator}</li>")
+                content.append("</ul>")
+            
             content.append("")  # Empty line before separator
             content.append("---\n")
             
