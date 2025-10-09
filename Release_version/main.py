@@ -925,6 +925,21 @@ class PortfolioManager:
 
     def generate_pdf(self, markdown_filename):
         """Generate PDF from markdown using weasyprint"""
+        # Add GTK3 bin folder to PATH for Windows
+        if sys.platform == 'win32':
+            # Mogelijke GTK3 locaties
+            gtk_paths = [
+                r"C:\Program Files\GTK3-Runtime Win64\bin",
+                os.path.join(os.path.dirname(sys.executable), "gtk-runtime", "bin"),  # Voor bundled versie
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "gtk-runtime", "bin"),  # Relatief aan script
+            ]
+            
+            # Voeg bestaande GTK3 paths toe aan PATH
+            for gtk_path in gtk_paths:
+                if os.path.exists(gtk_path):
+                    os.environ['PATH'] = gtk_path + os.pathsep + os.environ.get('PATH', '')
+                    break
+        
         try:
             import weasyprint
         except OSError as e:
