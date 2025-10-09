@@ -1,6 +1,26 @@
 # 📚 Portfolio Document Manager
 
-Een moderne, cross-platform desktop applicatie voor het beheren van portfolio items en het genereren van verantwoordingsdocumenten voor Technische Informatica studenten van de Hogeschool Utrecht.
+Een moderne, cross-platform desktop applicatie voor het beheren van portfolio items en het genereren van verantwoordingsdocumenten voor Technisc### 📋 Vereisten
+
+### Systeem Vereisten
+- **Windows**: Windows 10 of hoger
+  - **⚠️ BELANGRIJK voor .exe gebruikers**: Voor PDF generatie heb je GTK3-Runtime nodig
+  - Download en installeer: [GTK3-Runtime Win64](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases)
+  - Zonder GTK3 kun je de app gebruiken, maar geen PDFs genereren
+- **macOS**: macOS 10.14 of hoger  
+- **Linux**: Ubuntu 18.04+ / vergelijkbare distributies
+
+### Voor Development
+- Python 3.11 of hoger
+- Tkinter (meestal pre-installed met Python)
+- Zie `Release_version/requirements.txt` voor alle dependencies
+
+### Dependencies
+De applicatie gebruikt:
+- **Tkinter**: Voor de betrouwbare cross-platform UI
+- **Markdown**: Voor document conversie
+- **WeasyPrint**: Voor PDF generatie (vereist GTK3 op Windows)
+- **Andere**: Zie `Release_version/requirements.txt` voor complete lijstdenten van de Hogeschool Utrecht.
 
 ![Platform Support](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
 ![Python Version](https://img.shields.io/badge/python-3.11%2B-blue)
@@ -52,7 +72,12 @@ Een moderne, cross-platform desktop applicatie voor het beheren van portfolio it
    - **macOS**: `PortfolioDocumentManager-tkinter-macos.tar.gz`  
    - **Linux**: `PortfolioDocumentManager-tkinter-linux.tar.gz`
 
-3. **Installeer de applicatie:**
+3. **⚠️ Windows gebruikers: Installeer GTK3-Runtime (alleen voor PDF generatie):**
+   - Download: [GTK3-Runtime Win64 Installer](https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases)
+   - Installeer de nieuwste versie
+   - Dit is **alleen nodig voor PDF generatie** - de rest van de app werkt zonder GTK3
+
+4. **Installeer de applicatie:**
    - Pak het archief uit
    - Open een terminal in de uitgepakte map
    - Installeer dependencies:
@@ -60,12 +85,12 @@ Een moderne, cross-platform desktop applicatie voor het beheren van portfolio it
      pip install -r requirements.txt
      ```
 
-4. **Start de applicatie:**
+5. **Start de applicatie:**
    ```bash
    python Release_version/main.py
    ```
 
-5. **Eerste keer opstarten:**
+6. **Eerste keer opstarten:**
    - Vul je studentgegevens in (inclusief semester)
    - Begin met het toevoegen van portfolio items
    - Vraag feedback en genereer je document!

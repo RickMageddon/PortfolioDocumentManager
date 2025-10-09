@@ -925,7 +925,19 @@ class PortfolioManager:
 
     def generate_pdf(self, markdown_filename):
         """Generate PDF from markdown using weasyprint"""
-        import weasyprint
+        try:
+            import weasyprint
+        except OSError as e:
+            if "libgobject" in str(e) or "cannot load library" in str(e):
+                raise Exception(
+                    "WeasyPrint vereist GTK3 libraries op Windows.\n\n"
+                    "Installeer GTK3-Runtime:\n"
+                    "1. Download van: https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases\n"
+                    "2. Installeer de GTK3-Runtime Win64 installer\n"
+                    "3. Herstart de applicatie\n\n"
+                    "Of gebruik de Python versie in plaats van de .exe"
+                )
+            raise
         
         # Convert markdown to HTML
         with open(markdown_filename, 'r', encoding='utf-8') as f:
