@@ -1746,8 +1746,12 @@ class PortfolioItemDialog:
                                      variable=var)
             checkbox.pack(anchor="w", pady=2)
             
-            # Add tooltip functionality
-            self.create_tooltip(checkbox, lo_data['description'] + "\n\nVoorbeelden: " + ", ".join(lo_data['examples'][:3]))
+            # Add tooltip functionality (use .get so missing keys don't raise)
+            desc = lo_data.get('description', '')
+            examples = lo_data.get('examples', []) or []
+            examples_text = ", ".join(examples[:3]) if examples else "Geen voorbeelden beschikbaar"
+            tooltip_text = desc + "\n\nVoorbeelden: " + examples_text
+            self.create_tooltip(checkbox, tooltip_text)
         
         # Right column (second half)
         for i, (lo_num, lo_data) in enumerate(learning_outcomes_list[mid_point:]):
@@ -1763,8 +1767,12 @@ class PortfolioItemDialog:
                                      variable=var)
             checkbox.pack(anchor="w", pady=2)
             
-            # Add tooltip functionality
-            self.create_tooltip(checkbox, lo_data['description'] + "\n\nVoorbeelden: " + ", ".join(lo_data['examples'][:3]))
+            # Add tooltip functionality (use .get so missing keys don't raise)
+            desc = lo_data.get('description', '')
+            examples = lo_data.get('examples', []) or []
+            examples_text = ", ".join(examples[:3]) if examples else "Geen voorbeelden beschikbaar"
+            tooltip_text = desc + "\n\nVoorbeelden: " + examples_text
+            self.create_tooltip(checkbox, tooltip_text)
         
         # Assignment type selection
         ttk.Label(main_frame, text="Type opdracht:", font=("Arial", 10, "bold")).pack(anchor="w", pady=(10, 5))
