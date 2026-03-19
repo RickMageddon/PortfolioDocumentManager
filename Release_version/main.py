@@ -1,5 +1,5 @@
-# Start de app als script direct wordt uitgevoerd
 #!/usr/bin/env python3
+# Start de app als script direct wordt uitgevoerd
 """
 PeilDocument Program
 Een programma voor het beheren van portfolio items voor het verantwoordingsdocument.
@@ -325,7 +325,7 @@ class PortfolioManager:
             )
         else:
             self.attention_label.config(
-                text=f"{items_without_feedback} portfolio item(s) hebben nog geen feedback nodig", 
+                text=f"{items_without_feedback} portfolio item(s) hebben nog geen feedback",
                 foreground="red"
             )
 
@@ -345,14 +345,10 @@ class PortfolioManager:
         dialog.lift()
         dialog.focus_force()
         
-        # Ensure dialog is always on top
-        dialog.lift()
-        dialog.focus_force()
-        
         frame = ttk.Frame(dialog, padding="15")
         frame.pack(fill=tk.BOTH, expand=True)
-        
-        ttk.Label(frame, text="Welkom bij de PeilDocument Manager!", 
+
+        ttk.Label(frame, text="Welkom bij de PeilDocument Manager!",
                  font=("Arial", 12, "bold")).pack(pady=(0, 15))
         
         ttk.Label(frame, text="Vul eerst je basisgegevens in:").pack(anchor="w", pady=(0, 8))
@@ -691,6 +687,8 @@ class PortfolioManager:
             self.reflection_data = dialog.result
             self.save_data()
             
+            temp_markdown_filename = None
+
             # Create progress window
             progress_window = tk.Toplevel(self.root)
             progress_window.title("Document Genereren")
@@ -764,7 +762,7 @@ class PortfolioManager:
                 progress_window.destroy()
                 messagebox.showerror("PDF Generatie", f"PDF generatie is mislukt: {str(e)}")
                 # Clean up temp file
-                if os.path.exists(temp_markdown_filename):
+                if temp_markdown_filename and os.path.exists(temp_markdown_filename):
                     os.remove(temp_markdown_filename)
                 return
 
@@ -940,10 +938,14 @@ class PortfolioManager:
             for gtk_path in gtk_paths:
                 if os.path.exists(gtk_path) and gtk_path not in os.environ.get('PATH', ''):
                     os.environ['PATH'] = gtk_path + os.pathsep + os.environ.get('PATH', '')
-                    print(f"DEBUG: Added to PATH: {gtk_path}")  # Debug info
         
         try:
             import weasyprint
+        except ImportError:
+            raise Exception(
+                "WeasyPrint is niet geïnstalleerd.\n\n"
+                "Installeer het via: pip install weasyprint"
+            )
         except OSError as e:
             if "libgobject" in str(e) or "cannot load library" in str(e):
                 raise Exception(
